@@ -568,6 +568,26 @@ void MainWindow::prepareUi() {
     });
     verificationValidation->addAction(verificationValidationAct);
 
+    QAction* verificationValidationNewTest = new QAction(tr("Create new test"), this);
+    verificationValidationNewTest->setIcon(QPixmap::fromImage(coloredIcon(":/icons/verifyValidateIcon.png", "$Color-MenuIconVerifyValidate")));
+    verificationValidationNewTest->setStatusTip(tr("Create new test"));
+    connect(verificationValidationNewTest, &QAction::triggered, this, [this](){
+        if (activeDocumentId == -1) return;
+        documents[activeDocumentId]->getVerificationValidationWidget()->setStatusBar(statusBar);
+        documents[activeDocumentId]->getVerificationValidationWidget()->showNewTestDialog();
+    });
+    verificationValidation->addAction(verificationValidationNewTest);
+
+    QAction* verificationValidationNewTestSuite = new QAction(tr("Create new test suite"), this);
+    verificationValidationNewTestSuite->setIcon(QPixmap::fromImage(coloredIcon(":/icons/verifyValidateIcon.png", "$Color-MenuIconVerifyValidate")));
+    verificationValidationNewTestSuite->setStatusTip(tr("Create new test suite"));
+    connect(verificationValidationNewTestSuite, &QAction::triggered, this, [this](){
+        if (activeDocumentId == -1) return;
+        documents[activeDocumentId]->getVerificationValidationWidget()->setStatusBar(statusBar);
+        documents[activeDocumentId]->getVerificationValidationWidget()->showNewTestSuiteDialog();
+    });
+    verificationValidation->addAction(verificationValidationNewTestSuite);
+
     QMenu* help = menuTitleBar->addMenu(tr("&Help"));
     QAction* aboutAct = new QAction(tr("About"), this);
     connect(aboutAct, &QAction::triggered, this, [this](){

@@ -19,6 +19,16 @@ VerificationValidationWidget::~VerificationValidationWidget() {
     QSqlDatabase::removeDatabase(dbConnectionName);
 }
 
+void VerificationValidationWidget::showNewTestDialog() {
+    statusBar->showMessage("Create new test...");
+    SetupNewTestUI();
+}
+
+void VerificationValidationWidget::showNewTestSuiteDialog() {
+    statusBar->showMessage("Create new test suite...");
+    SetupNewTestSuiteUI();
+}
+
 
 void VerificationValidationWidget::showSelectTests() {
     statusBar->showMessage("Select tests to run...");
@@ -315,6 +325,42 @@ void VerificationValidationWidget::updateTestListWidget(QListWidgetItem* suite_c
     checkSuiteSA();
 }
 
+void VerificationValidationWidget::updateNewSuiteTestList(QListWidgetItem* test_clicked) {
+    QSqlQuery* q = new QSqlQuery(getDatabase());
+    q->prepare("SELECT id FROM Tests WHERE testName = :testName");
+    q->bindValue(":testName", test_clicked->text());
+    dbExec(q, !SHOW_ERROR_POPUP);
+
+    if(!test_clicked->checkState()) {
+        cout << q->value(0).toString().toStdString() << endl;
+        newSuiteTestsList << q->value(0).toString();
+        cout << "is it here" << endl;
+    }
+    else {
+        int index = newSuiteTestsList.indexOf(QRegExp(q->value(0).toString()));
+        newSuiteTestsList.removeAt(index);
+    }
+}
+
+void VerificationValidationWidget::updateDbwithNewSuite() {
+    QSqlQuery* q = new QSqlQuery(getDatabase());
+
+    q->prepare("INSERT INTO TestSuites (suiteName) VALUES (?)");
+    q->addBindValue(newSuiteNameBox->text());
+    dbExec(q);  
+
+    QString testSuiteID = q->lastInsertId().toString();
+
+    for (QString testID : newSuiteTestsList) {
+        q->prepare("INSERT INTO TestsInSuite (testSuiteID, testID) VALUES (?, ?)");
+        q->addBindValue(testSuiteID.toInt());
+        q->addBindValue(testID.toInt());
+        dbExec(q);  
+    }
+}
+
+
+
 void VerificationValidationWidget::testListSelection(QListWidgetItem* test_clicked) {
     QSqlQuery* q1 = new QSqlQuery(getDatabase());
     QSqlQuery* q2 = new QSqlQuery(getDatabase());
@@ -351,6 +397,96 @@ void VerificationValidationWidget::testListSelection(QListWidgetItem* test_click
     checkSuiteSA();
     checkTestSA();
 }
+
+void VerificationValidationWidget::SetupNewTestUI() {
+    QDialog* newTestsDialog = new QDialog();
+    newTestsDialog->setModal(true);
+    newTestsDialog->setWindowTitle("Create new test");
+
+    newTestsDialog->exec();
+}
+
+void VerificationValidationWidget::SetupNewTestSuiteUI() {
+    QDialog* newTestSuiteDialog = new QDialog();
+    newTestSuiteDialog->setModal(true);
+    newTestSuiteDialog->setWindowTitle("Create new test suite");
+
+    // Get test list from db
+    QSqlDatabase db = getDatabase();
+    QSqlQuery query(db);
+    query.exec("Select testName, testCommand from Tests ORDER BY id ASC");
+    QStringList tests;
+    QStringList testCmds;
+    while(query.next()){
+    	tests << query.value(0).toString();
+        testCmds << query.value(1).toString();
+    }
+    
+    // Insert test list into tests checklist widget
+    testList->addItems(tests);
+    QListWidgetItem* item = 0;
+    for (int i = 0; i < testList->count(); i++) {
+        item = testList->item(i);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(Qt::Unchecked);
+        }
+
+    // Tests checklist add to dialog
+   	testList->setMinimumWidth(testList->sizeHintForColumn(0)+40);
+    
+
+    // Populate Search bar
+    QHBoxLayout* newSuiteName = new QHBoxLayout();
+    QLabel* newSuiteLabel = new QLabel("New test uite Name: ");
+    newSuiteNameBox = new QLineEdit("");
+    newSuiteName->addWidget(newSuiteLabel);
+    newSuiteName->addWidget(newSuiteNameBox);
+
+   	// Populate Search bar
+    QHBoxLayout* searchBar = new QHBoxLayout();
+    QLabel* searchLabel = new QLabel("Search: ");
+    searchBox = new QLineEdit("");
+    searchBar->addWidget(searchLabel);
+    searchBar->addWidget(searchBox);
+	
+    // format and populate Select Tests dialog box
+    QGridLayout* grid = new QGridLayout();
+    
+    QGroupBox* groupbox2 = new QGroupBox("Test List");
+    QVBoxLayout* r_vbox = new QVBoxLayout();
+    r_vbox->addLayout(newSuiteName);
+    r_vbox->addSpacing(5);
+    r_vbox->addLayout(searchBar);
+    r_vbox->addSpacing(5);
+    r_vbox->addSpacing(5);
+    r_vbox->addWidget(testList);
+    groupbox2->setLayout(r_vbox);
+    
+    QGroupBox* groupbox3 = new QGroupBox();
+    QDialogButtonBox* buttonOptions = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    QHBoxLayout* hbox = new QHBoxLayout();
+    hbox->addWidget(buttonOptions);
+    groupbox3->setLayout(hbox);
+    
+    //grid->addWidget(groupbox1, 0, 0);
+    grid->addWidget(groupbox2, 0, 1);
+    grid->addWidget(groupbox3, 1, 0, 1, 2);
+    newTestSuiteDialog->setLayout(grid);
+	
+    // Test select signal connect function
+    connect(testList, SIGNAL(itemClicked(QListWidgetItem *)), this, SLOT(updateNewSuiteTestList(QListWidgetItem*)));
+
+    // Search button pressed signal select function
+    connect(searchBox, SIGNAL(textEdited(const QString &)), this, SLOT(searchTests(const QString &)));
+
+    connect(buttonOptions, SIGNAL(clicked(QAbstractButton *)), this, SLOT(updateDbwithNewSuite()));
+    connect(buttonOptions, &QDialogButtonBox::rejected, newTestSuiteDialog, &QDialog::reject);
+
+    //********************************************************
+
+    newTestSuiteDialog->exec();
+}
+
 
 void VerificationValidationWidget::userInputDialogUI(QListWidgetItem* test) {
     QDialog* userInputDialog = new QDialog();

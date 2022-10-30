@@ -17,6 +17,7 @@
 #include <QHBoxWidget.h>
 #include "VerificationValidation.h"
 #include "Utils.h"
+#include <vector>
 
 #define RESULT_CODE_COLUMN  0
 #define TEST_NAME_COLUMN    1
@@ -30,6 +31,8 @@ public:
     explicit VerificationValidationWidget(Document* document, QWidget* parent = nullptr);
     ~VerificationValidationWidget();
     void showSelectTests();
+    void showNewTestDialog();
+    void showNewTestSuiteDialog();
     QString* runTest(const QString& cmd);
     //void runTests();
     void setStatusBar(QStatusBar* statusBar) { this->statusBar = statusBar; }
@@ -46,13 +49,16 @@ private slots:
     void setupDetailedResult(int row, int  column);
     void searchTests(const QString &input);
     void userInputDialogUI(QListWidgetItem*);
+    void updateNewSuiteTestList(QListWidgetItem*);
+    void updateDbwithNewSuite();
 
 private:
     // widget-specific data
     Document* document;
     QString modelID;
     QString dbName;
-    QString dbConnectionName;
+    QString dbConnectionName; 
+    QStringList newSuiteTestsList;
 
     // user interface data
     QTableWidget* resultTable;
@@ -61,6 +67,7 @@ private:
     QListWidget* test_sa;
     QListWidget* suite_sa;
     QLineEdit* searchBox;
+    QLineEdit* newSuiteNameBox;
     QDialog* selectTestsDialog;
     QStatusBar* statusBar;
 
@@ -69,7 +76,9 @@ private:
     void dbInitTables();
     void dbPopulateDefaults();
     void setupUI();
-
+    void SetupNewTestUI();
+    void SetupNewTestSuiteUI();
+    
     // database functions
     QSqlQuery* dbExec(QString command, bool showErrorPopup = true);
     void dbExec(QSqlQuery*& query, bool showErrorPopup = true);
