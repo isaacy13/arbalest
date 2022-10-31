@@ -33,6 +33,8 @@ public:
     void showSelectTests();
     void showNewTestDialog();
     void showNewTestSuiteDialog();
+    void showRemoveTestSuiteDialog();
+    void showRemoveTestDialog();
     QString* runTest(const QString& cmd);
     //void runTests();
     void setStatusBar(QStatusBar* statusBar) { this->statusBar = statusBar; }
@@ -49,8 +51,13 @@ private slots:
     void setupDetailedResult(int row, int  column);
     void searchTests(const QString &input);
     void userInputDialogUI(QListWidgetItem*);
-    void updateNewSuiteTestList(QListWidgetItem*);
+    void updateSelectedTestList(QListWidgetItem*);
+    void updateSelectedSuiteList(QListWidgetItem*);
     void updateDbwithNewSuite();
+    void searchSuites(const QString &input);
+    void updateDbwithRemovedSuite();
+    void updateDbwithRemovedTest();
+    void updateDbwithNewTest();
 
 private:
     // widget-specific data
@@ -58,18 +65,24 @@ private:
     QString modelID;
     QString dbName;
     QString dbConnectionName; 
-    QStringList newSuiteTestsList;
+    QStringList selectedTests;
 
     // user interface data
     QTableWidget* resultTable;
     QListWidget* testList;
+    QListWidget* testListSuiteCreation;
     QListWidget* suiteList;
     QListWidget* test_sa;
     QListWidget* suite_sa;
     QLineEdit* searchBox;
     QLineEdit* newSuiteNameBox;
     QDialog* selectTestsDialog;
+    QDialog* newTestSuiteDialog;
+    QDialog* removeTestSuiteDialog;
+    QDialog* removeTestDialog;
+    QDialog* newTestsDialog;
     QStatusBar* statusBar;
+    QGroupBox* groupbox1;
 
     // init functions
     void dbConnect();
@@ -78,6 +91,8 @@ private:
     void setupUI();
     void SetupNewTestUI();
     void SetupNewTestSuiteUI();
+    void SetupRemoveTestSuiteUI();
+    void SetupRemoveTestUI();
     
     // database functions
     QSqlQuery* dbExec(QString command, bool showErrorPopup = true);

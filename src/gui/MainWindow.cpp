@@ -577,6 +577,16 @@ void MainWindow::prepareUi() {
         documents[activeDocumentId]->getVerificationValidationWidget()->showNewTestDialog();
     });
     verificationValidation->addAction(verificationValidationNewTest);
+    
+    QAction* verificationValidationRemoveTest = new QAction(tr("remove test"), this);
+    verificationValidationRemoveTest->setIcon(QPixmap::fromImage(coloredIcon(":/icons/verifyValidateIcon.png", "$Color-MenuIconVerifyValidate")));
+    verificationValidationRemoveTest->setStatusTip(tr("Remove test"));
+    connect(verificationValidationRemoveTest, &QAction::triggered, this, [this](){
+        if (activeDocumentId == -1) return;
+        documents[activeDocumentId]->getVerificationValidationWidget()->setStatusBar(statusBar);
+        documents[activeDocumentId]->getVerificationValidationWidget()->showRemoveTestDialog();
+    });
+    verificationValidation->addAction(verificationValidationRemoveTest);
 
     QAction* verificationValidationNewTestSuite = new QAction(tr("Create new test suite"), this);
     verificationValidationNewTestSuite->setIcon(QPixmap::fromImage(coloredIcon(":/icons/verifyValidateIcon.png", "$Color-MenuIconVerifyValidate")));
@@ -587,6 +597,16 @@ void MainWindow::prepareUi() {
         documents[activeDocumentId]->getVerificationValidationWidget()->showNewTestSuiteDialog();
     });
     verificationValidation->addAction(verificationValidationNewTestSuite);
+
+    QAction* verificationValidationRemoveTestSuite = new QAction(tr("Remove test suite"), this);
+    verificationValidationRemoveTestSuite->setIcon(QPixmap::fromImage(coloredIcon(":/icons/verifyValidateIcon.png", "$Color-MenuIconVerifyValidate")));
+    verificationValidationRemoveTestSuite->setStatusTip(tr("Remove test suite"));
+    connect(verificationValidationRemoveTestSuite, &QAction::triggered, this, [this](){
+        if (activeDocumentId == -1) return;
+        documents[activeDocumentId]->getVerificationValidationWidget()->setStatusBar(statusBar);
+        documents[activeDocumentId]->getVerificationValidationWidget()->showRemoveTestSuiteDialog();
+    });
+    verificationValidation->addAction(verificationValidationRemoveTestSuite);
 
     QMenu* help = menuTitleBar->addMenu(tr("&Help"));
     QAction* aboutAct = new QAction(tr("About"), this);
