@@ -592,7 +592,7 @@ void VerificationValidationWidget::updateDbwithRemovedTest() {
         // uncommennt when the database is update to have args
         q->prepare("DELETE FROM TestArg WHERE testID = :testID");
         q->bindValue(":testID", test);
-        dbExec(q,!SHOW_ERROR_POPUP); 
+        dbExec(q,!SHOW_ERROR_POPUP);
     }
 
     removeTestDialog->close();
@@ -752,17 +752,6 @@ void VerificationValidationWidget::SetupNewTestUI() {
 
     //*********************
 
-    /*
-    // attempt to make a scroll area
-    newTestsDialog->setMinimumSize(800, 300);
-    QScrollArea* scrollArea = new QScrollArea(newTestsDialog);
-    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    QWidget* viewport = new QWidget(newTestsDialog);
-    scrollArea->setWidget(viewport);
-    scrollArea->setWidgetResizable(true);
-    QGridLayout* grid = new QGridLayout(viewport);
-    viewport->setLayout(grid);
-    */
 
     QGridLayout* grid = new QGridLayout();
 
@@ -787,15 +776,6 @@ void VerificationValidationWidget::SetupNewTestUI() {
     testCatagory->addWidget(catagoryLabel);
     testCatagory->addWidget(newCatagoryBox);
 
-    // Does command have variable arguments checkbox
-    /*
-    QHBoxLayout* isArgsVariable = new QHBoxLayout();
-    QLabel* isArgsVariableLabel = new QLabel("Does the test have variable arguments: ");
-    QCheckBox* checkbox = new QCheckBox("");
-    isArgsVariable->addWidget(isArgsVariableLabel);
-    isArgsVariable->addWidget(checkbox);
-    */
-
     groupbox1 = new QGroupBox("Test List");
     QVBoxLayout* r_vbox = new QVBoxLayout();
     r_vbox->addLayout(newTestName);
@@ -804,10 +784,7 @@ void VerificationValidationWidget::SetupNewTestUI() {
     r_vbox->addSpacing(5);
     r_vbox->addLayout(testCatagory);
     r_vbox->addSpacing(5);
-    //r_vbox->addLayout(isArgsVariable);
     r_vbox->addSpacing(5);
-    r_vbox->addSpacing(5);
-    //r_vbox->addWidget(testList);
     groupbox1->setLayout(r_vbox);
 
     int maxCol = 4;
@@ -816,6 +793,12 @@ void VerificationValidationWidget::SetupNewTestUI() {
         QString index = QString::number(i + 1);
         groupBoxVector.push_back(new QGroupBox("Argument " + index));
         QVBoxLayout* arg_vbox = new QVBoxLayout();
+
+        // Tops comment for users
+        QHBoxLayout* tops = new QHBoxLayout();
+        QLabel* topsLabel = new QLabel("If for tops write PATH or NAME \nin arguments");
+        tops->addWidget(topsLabel);
+
 
         // argument
         QHBoxLayout* arg = new QHBoxLayout();
@@ -840,6 +823,8 @@ void VerificationValidationWidget::SetupNewTestUI() {
 
 
         QVBoxLayout* vbox = new QVBoxLayout();
+        vbox->addLayout(tops);
+        vbox->addSpacing(5);
         vbox->addLayout(arg);
         vbox->addSpacing(5);
         vbox->addLayout(defaultValue);
