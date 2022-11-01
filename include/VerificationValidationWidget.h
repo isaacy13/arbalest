@@ -82,6 +82,7 @@ private:
     QString dbName;
     QString dbConnectionName; 
     QStringList selectedTests;
+    QVector<QGroupBox*> groupBoxVector;
 
     // user interface data
     QTableWidget* resultTable;

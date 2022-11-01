@@ -478,43 +478,61 @@ void VerificationValidationWidget::updateDbwithRemovedSuite() {
 void VerificationValidationWidget::updateDbwithNewTest() {
     QSqlQuery* q = new QSqlQuery(getDatabase());
 
-    //q->prepare("INSERT INTO Tests (testName, testCommand) VALUES (?, ?)");
+    bool isVariable = false;
+    for (int i = 0; i < groupBoxVector.size(); i++) {
+        QList<QCheckBox*> checkboxList = groupBoxVector.at(i)->findChildren<QCheckBox*>();
+        if (checkboxList.at(0)->isChecked())
+            isVariable = true;
+    }
+
+    QList<QLineEdit*> testInfoList = groupbox1->findChildren<QLineEdit*>();
+    QString name = testInfoList.at(0)->text();
+    QString command = testInfoList.at(1)->text();
+    QString catagory = testInfoList.at(2)->text();
+
+    q->prepare("INSERT INTO Tests (testName, testCommand, hasValArgs, category) VALUES (?, ?, ?, ?)");
     //q->addBindValue(DefaultTests::allTests[i].testName);
     //q->addBindValue(DefaultTests::allTests[i].testCommand);
     //dbExec(q);
+    q->addBindValue(name);
+    q->addBindValue(command);
+    q->addBindValue(isVariable);
+    q->addBindValue(catagory);
+    dbExec(q); 
 
-    //QString testID = last inerstion ID()
+    QString testID = q->lastInsertId().toString();
 
-    QList<QLineEdit*> list = groupbox1->findChildren<QLineEdit*>();
-
-    cout << list.at(0)->text().toStdString() << endl;
-
-
-
-    /*
-    QString arg;
-    QString defaultValue;
-    bool isVariable;
-
-    for(int i = 1; i < vector.size(); i++)
+    for(int i = 0; i < groupBoxVector.size(); i++)
     {
-        if (vector.at(i).isChecked()) {
-            QList<QLineEdit*> textList = vector.at(i).findChildren<QLineEdit*>();
-            QList<QCheckBox*> boolList = vector.at(i).findChildren<QCheckBox*>();
+        QList<QLineEdit*> textList = groupBoxVector.at(i)->findChildren<QLineEdit*>();
+        QString arg = textList.at(0)->text();
 
-            arg = textList.at(0).text();
-            isVariable = boolList.at(0).isChecked();
-            if (isVariable)
-                defaultValue = textList.at(1).text();
-                // DO INSERTION OF VARIABLE TEST HERE
-            else
-            {
-                // DO INSERTION OF STATIC TET HERE
+        if (!arg.isEmpty()) {
+            QList<QLineEdit*> textList = groupBoxVector.at(i)->findChildren<QLineEdit*>();
+            QList<QCheckBox*> boolList = groupBoxVector.at(i)->findChildren<QCheckBox*>();
+
+            QString defaultValue = textList.at(1)->text();
+            bool isVariable = boolList.at(0)->isChecked();
+
+            if (isVariable) {
+                q->prepare("INSERT INTO TestArg (testID, argIdx, arg, isVarArg, defaultVal) VALUES (?, ?, ?, ?, ?)");
+                q->addBindValue(testID);
+                q->addBindValue(i);
+                q->addBindValue(arg);
+                q->addBindValue(isVariable);
+                q->addBindValue(defaultValue);
             }
+            else {
+                q->prepare("INSERT INTO TestArg (testID, argIdx, arg, isVarArg) VALUES (?, ?, ?, ?)");
+                q->addBindValue(testID);
+                q->addBindValue(i);
+                q->addBindValue(arg);
+                q->addBindValue(isVariable);
+            }
+
+            dbExec(q); 
         }
     }
-
-    */
 
    newTestsDialog->close();
 }
@@ -571,11 +589,10 @@ void VerificationValidationWidget::updateDbwithRemovedTest() {
         q->bindValue(":testID", test);
         dbExec(q,!SHOW_ERROR_POPUP); 
 
-        /* // uncommennt when the database is update to have args
-        q->prepare("DELETE FROM Args WHERE testID = :testID");
+        // uncommennt when the database is update to have args
+        q->prepare("DELETE FROM TestArg WHERE testID = :testID");
         q->bindValue(":testID", test);
         dbExec(q,!SHOW_ERROR_POPUP); 
-        */
     }
 
     removeTestDialog->close();
@@ -727,15 +744,17 @@ void VerificationValidationWidget::SetupNewTestUI() {
     testList->clear();
     suiteList->clear();
     selectedTests.clear();
+    groupBoxVector.clear();
 
     newTestsDialog = new QDialog();
     newTestsDialog->setModal(true);
     newTestsDialog->setWindowTitle("Create new test");
-    //newTestsDialog->setMinimumSize(600, 350);
 
     //*********************
 
-    /* // attempt to make a scroll area
+    /*
+    // attempt to make a scroll area
+    newTestsDialog->setMinimumSize(800, 300);
     QScrollArea* scrollArea = new QScrollArea(newTestsDialog);
     scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     QWidget* viewport = new QWidget(newTestsDialog);
@@ -769,11 +788,13 @@ void VerificationValidationWidget::SetupNewTestUI() {
     testCatagory->addWidget(newCatagoryBox);
 
     // Does command have variable arguments checkbox
+    /*
     QHBoxLayout* isArgsVariable = new QHBoxLayout();
     QLabel* isArgsVariableLabel = new QLabel("Does the test have variable arguments: ");
     QCheckBox* checkbox = new QCheckBox("");
     isArgsVariable->addWidget(isArgsVariableLabel);
     isArgsVariable->addWidget(checkbox);
+    */
 
     groupbox1 = new QGroupBox("Test List");
     QVBoxLayout* r_vbox = new QVBoxLayout();
@@ -783,18 +804,17 @@ void VerificationValidationWidget::SetupNewTestUI() {
     r_vbox->addSpacing(5);
     r_vbox->addLayout(testCatagory);
     r_vbox->addSpacing(5);
-    r_vbox->addLayout(isArgsVariable);
+    //r_vbox->addLayout(isArgsVariable);
     r_vbox->addSpacing(5);
     r_vbox->addSpacing(5);
     //r_vbox->addWidget(testList);
     groupbox1->setLayout(r_vbox);
 
-
-    QVector<QGroupBox*> grouBoxVector;
-    int numArgs = 2;
+    int maxCol = 4;
+    int numArgs = 15;
     for (int i = 0; i < numArgs; i++) {
         QString index = QString::number(i + 1);
-        grouBoxVector.push_back(new QGroupBox("Argument " + index));
+        groupBoxVector.push_back(new QGroupBox("Argument " + index));
         QVBoxLayout* arg_vbox = new QVBoxLayout();
 
         // argument
@@ -827,9 +847,11 @@ void VerificationValidationWidget::SetupNewTestUI() {
         vbox->addLayout(isArgsVariable);
         vbox->addSpacing(5);
         //vbox->addSpacing(5);
-        grouBoxVector.at(i)->setLayout(vbox);
+        groupBoxVector.at(i)->setLayout(vbox);
 
-        grid->addWidget(grouBoxVector.at(i), i + 1, 0, 1, 1);
+        int row = (i + 1) / maxCol;
+        int column = (i + 1) % maxCol;
+        grid->addWidget(groupBoxVector.at(i), row, column, 1, 1);
     }
 
     // accept reject buttons
@@ -841,7 +863,7 @@ void VerificationValidationWidget::SetupNewTestUI() {
     groupbox3->setLayout(hbox);
 
     grid->addWidget(groupbox1, 0, 0);
-    grid->addWidget(groupbox3, numArgs+1, 0, 1, 2);
+    grid->addWidget(groupbox3, (numArgs/maxCol) + 1, maxCol - 1, 1, 2);
     newTestsDialog->setLayout(grid);
     //newTestsDialog->layout()->addWidget(scrollArea);
 
@@ -852,7 +874,6 @@ void VerificationValidationWidget::SetupNewTestUI() {
     //connect(buttonOptions, &QDialogButtonBox::accepted, this, SLOT(updateDbwithNewTest()));
     //connect(buttonOptions, &QDialogButtonBox::rejected, newTestsDialog, &QDialog::reject);
 
-    newTestsDialog->show();
     newTestsDialog->exec();
 }
 
