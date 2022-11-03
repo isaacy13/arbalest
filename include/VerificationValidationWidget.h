@@ -56,11 +56,10 @@ public:
     void showNewTestSuiteDialog();
     void showRemoveTestSuiteDialog();
     void showRemoveTestDialog();
-    QString* runTest(const QString& cmd);
+    //QString* runTest(const QString& cmd);
     //void runTests();
     void setStatusBar(QStatusBar* statusBar) { this->statusBar = statusBar; }
     //QDialog* getDialog() {return selectTestsDialog;};
-    void setStatusBar(QStatusBar *statusBar) { this->statusBar = statusBar; }
     QString getDBConnectionName() const { return dbConnectionName; }
 
 public slots:
@@ -116,6 +115,7 @@ private:
     QDialog* newTestsDialog;
     QStatusBar* statusBar;
     QGroupBox* groupbox1;
+    QGroupBox* newTestInfoGroupbox;
     std::map<QListWidgetItem*, TestItem> testItemMap;
     std::map<int, QListWidgetItem*> testIdMap;
 

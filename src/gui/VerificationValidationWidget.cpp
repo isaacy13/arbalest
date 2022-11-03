@@ -46,27 +46,27 @@ VerificationValidationWidget::~VerificationValidationWidget() {
 }
 
 void VerificationValidationWidget::showNewTestDialog() {
-    statusBar->showMessage("Create new test...");
+    //statusBar->showMessage("Create new test...");
     SetupNewTestUI();
 }
 
 void VerificationValidationWidget::showRemoveTestSuiteDialog() {
-    statusBar->showMessage("Remove test suite...");
+    //statusBar->showMessage("Remove test suite...");
     SetupRemoveTestSuiteUI();
 }
 
 void VerificationValidationWidget::showRemoveTestDialog() {
-    statusBar->showMessage("Remove test...");
+    //statusBar->showMessage("Remove test...");
     SetupRemoveTestUI();
 }
 
 void VerificationValidationWidget::showNewTestSuiteDialog() {
-    statusBar->showMessage("Create new test suite...");
+    //statusBar->showMessage("Create new test suite...");
     SetupNewTestSuiteUI();
 }
 
 void VerificationValidationWidget::showSelectTests() {
-    statusBar->showMessage("Select tests to run...");
+    //statusBar->showMessage("Select tests to run...");
     setupUI();
     selectTestsDialog->exec();
     //connect(selectTestsDialog, SIGNAL(accepted()), this, SLOT(runTests()));
@@ -83,10 +83,11 @@ QString VerificationValidationWidget::constructTestCommand(TestItem item){
     while(q->next()){
         cmd = cmd + " " + q->value(0).toString();
         if(q->value(1).toString() != NULL){
-            cmd = cmd + " " + q->value(1).toString();
+            cmd = cmd + q->value(1).toString();
         }
     }
     
+    delete q;
     return cmd;
 }
 
@@ -167,6 +168,7 @@ void VerificationValidationWidget::runTests() {
             dbExec(q2);
         }
 
+        delete q2;
         showResult(testResultID);
     }
 
@@ -186,6 +188,7 @@ void VerificationValidationWidget::runTests() {
     QLabel *title = new QLabel(dockableTitle);
     title->setObjectName("dockableHeader");
     parentDockable->setTitleBarWidget(title);
+    delete q;
 }
 
 void VerificationValidationWidget::dbConnect(const QString dbFilePath) {
@@ -255,7 +258,7 @@ void VerificationValidationWidget::dbInitTables() {
     if (!getDatabase().tables().contains("Model"))
         delete dbExec("CREATE TABLE Model (id INTEGER PRIMARY KEY, filepath TEXT NOT NULL UNIQUE, md5Checksum TEXT NOT NULL)");
     if (!getDatabase().tables().contains("Tests"))
-        dbExec("CREATE TABLE Tests (id INTEGER PRIMARY KEY, testName TEXT NOT NULL, testCommand TEXT NOT NULL, hasValArgs BOOL NOT NULL, category TEXT NOT NULL)");
+        delete dbExec("CREATE TABLE Tests (id INTEGER PRIMARY KEY, testName TEXT NOT NULL, testCommand TEXT NOT NULL, hasValArgs BOOL NOT NULL, category TEXT NOT NULL)");
         // dbExec("CREATE TABLE Tests (id INTEGER PRIMARY KEY, testName TEXT NOT NULL, testCommand TEXT NOT NULL UNIQUE)");
     if (!getDatabase().tables().contains("TestResults"))
         delete dbExec("CREATE TABLE TestResults (id INTEGER PRIMARY KEY, modelID INTEGER NOT NULL, testID INTEGER NOT NULL, resultCode TEXT, terminalOutput TEXT)");
@@ -267,8 +270,8 @@ void VerificationValidationWidget::dbInitTables() {
         delete dbExec("CREATE TABLE TestSuites (id INTEGER PRIMARY KEY, suiteName TEXT NOT NULL, UNIQUE(suiteName))");
     if (!getDatabase().tables().contains("TestsInSuite"))
         delete dbExec("CREATE TABLE TestsInSuite (id INTEGER PRIMARY KEY, testSuiteID INTEGER NOT NULL, testID INTEGER NOT NULL)");
-    if (!getDatabase().tables().contains("TestArgs"))
-        dbExec("CREATE TABLE TestArg (id INTEGER PRIMARY KEY, testID INTEGER NOT NULL, argIdx INTEGER NOT NULL, arg TEXT NOT NULL, isVarArg BOOL NOT NULL, defaultVal TEXT)");
+    if (!getDatabase().tables().contains("TestArg"))
+        delete dbExec("CREATE TABLE TestArg (id INTEGER PRIMARY KEY, testID INTEGER NOT NULL, argIdx INTEGER NOT NULL, arg TEXT NOT NULL, isVarArg BOOL NOT NULL, defaultVal TEXT)");
 }
 
 void VerificationValidationWidget::dbPopulateDefaults() {
@@ -438,7 +441,7 @@ void VerificationValidationWidget::checkTestSA() {
 
 void VerificationValidationWidget::updateTestListWidget(QListWidgetItem* suite_clicked) {
     QSqlQuery* q = new QSqlQuery(getDatabase());
-    q->prepare("Select testID from TestsInSuite Where testSuiteID = (SELECT id FROM TestSuites WHERE suiteName = :suiteName)");
+    q->prepare("SELECT testID FROM TestsInSuite WHERE testSuiteID = (SELECT id FROM TestSuites WHERE suiteName = :suiteName)");
     q->bindValue(":suiteName", suite_clicked->text());
     dbExec(q);
 
@@ -477,7 +480,7 @@ void VerificationValidationWidget::updateSelectedTestList(QListWidgetItem* test_
             selectedTests.removeAt(index);
         }
     }
-    
+    delete q;
 }
 
 void VerificationValidationWidget::updateSelectedSuiteList(QListWidgetItem* test_clicked){
@@ -495,6 +498,7 @@ void VerificationValidationWidget::updateSelectedSuiteList(QListWidgetItem* test
         }
     }
     
+    delete q;
 }
 
 void VerificationValidationWidget::updateDbwithNewSuite() {
@@ -513,9 +517,7 @@ void VerificationValidationWidget::updateDbwithNewSuite() {
         dbExec(q);  
     }
 
-    ///testList->clear();
-    ///suiteList->clear();
-    ///selectedTests.clear();
+    delete q;
     newTestSuiteDialog->close();
 }
 
@@ -533,6 +535,7 @@ void VerificationValidationWidget::updateDbwithRemovedSuite() {
         dbExec(q,!SHOW_ERROR_POPUP); 
     }
 
+    delete q;
     removeTestSuiteDialog->close();
 }
 
@@ -546,15 +549,12 @@ void VerificationValidationWidget::updateDbwithNewTest() {
             isVariable = true;
     }
 
-    QList<QLineEdit*> testInfoList = groupbox1->findChildren<QLineEdit*>();
+    QList<QLineEdit*> testInfoList = newTestInfoGroupbox->findChildren<QLineEdit*>();
     QString name = testInfoList.at(0)->text();
     QString command = testInfoList.at(1)->text();
     QString catagory = testInfoList.at(2)->text();
 
     q->prepare("INSERT INTO Tests (testName, testCommand, hasValArgs, category) VALUES (?, ?, ?, ?)");
-    //q->addBindValue(DefaultTests::allTests[i].testName);
-    //q->addBindValue(DefaultTests::allTests[i].testCommand);
-    //dbExec(q);
     q->addBindValue(name);
     q->addBindValue(command);
     q->addBindValue(isVariable);
@@ -595,14 +595,15 @@ void VerificationValidationWidget::updateDbwithNewTest() {
         }
     }
 
-   newTestsDialog->close();
+    delete q;
+    newTestsDialog->close();
 }
 
 void VerificationValidationWidget::testListSelection(QListWidgetItem* test_clicked) {
     QSqlQuery* q1 = new QSqlQuery(getDatabase());
     QSqlQuery* q2 = new QSqlQuery(getDatabase());
     
-    q1->prepare("Select testSuiteID from TestsInSuite Where testID = :id");
+    q1->prepare("SELECT testSuiteID FROM TestsInSuite WHERE testID = :id");
     q1->bindValue(":id", testItemMap.at(test_clicked).id);
     dbExec(q1);
     while(q1->next()){
@@ -615,7 +616,7 @@ void VerificationValidationWidget::testListSelection(QListWidgetItem* test_click
             }
         } else {
             // Check if all test in a suite is checked  -> check suite
-            q2->prepare("Select testID from TestsInSuite Where testSuiteID = :suiteID");
+            q2->prepare("SELECT testID FROM TestsInSuite WHERE testSuiteID = :suiteID");
             q2->bindValue(":suiteID", q1->value(0).toInt());
             dbExec(q2);
             while(q2->next()){
@@ -659,6 +660,7 @@ void VerificationValidationWidget::updateDbwithRemovedTest() {
         dbExec(q,!SHOW_ERROR_POPUP);
     }
 
+    delete q;
     removeTestDialog->close();
 }
 
@@ -674,7 +676,7 @@ void VerificationValidationWidget::SetupRemoveTestUI() {
     // Get test list from db
     QSqlDatabase db = getDatabase();
     QSqlQuery query(db);
-    query.exec("Select testName, testCommand from Tests ORDER BY id ASC");
+    query.exec("SELECT testName, testCommand FROM Tests ORDER BY id ASC");
     QStringList tests;
     QStringList testCmds;
     while(query.next()){
@@ -718,7 +720,6 @@ void VerificationValidationWidget::SetupRemoveTestUI() {
     hbox->addWidget(buttonOptions);
     groupbox3->setLayout(hbox);
     
-    //grid->addWidget(groupbox1, 0, 0);
     grid->addWidget(groupbox2, 0, 1);
     grid->addWidget(groupbox3, 1, 0, 1, 2);
     removeTestDialog->setLayout(grid);
@@ -758,7 +759,7 @@ void VerificationValidationWidget::SetupRemoveTestSuiteUI() {
     // Get suite list from db
     QSqlDatabase db = getDatabase();
     QSqlQuery query(db);
-    query.exec("Select suiteName from TestSuites ORDER by id ASC");
+    query.exec("SELECT suiteName FROM TestSuites ORDER by id ASC");
     QStringList  testSuites;
     while(query.next()){
     	testSuites << query.value(0).toString();
@@ -840,7 +841,7 @@ void VerificationValidationWidget::SetupNewTestUI() {
     testCatagory->addWidget(catagoryLabel);
     testCatagory->addWidget(newCatagoryBox);
 
-    groupbox1 = new QGroupBox("Test List");
+    newTestInfoGroupbox = new QGroupBox("Test List");
     QVBoxLayout* r_vbox = new QVBoxLayout();
     r_vbox->addLayout(newTestName);
     r_vbox->addSpacing(5);
@@ -849,7 +850,7 @@ void VerificationValidationWidget::SetupNewTestUI() {
     r_vbox->addLayout(testCatagory);
     r_vbox->addSpacing(5);
     r_vbox->addSpacing(5);
-    groupbox1->setLayout(r_vbox);
+    newTestInfoGroupbox->setLayout(r_vbox);
 
     int maxCol = 4;
     int numArgs = 15;
@@ -911,7 +912,7 @@ void VerificationValidationWidget::SetupNewTestUI() {
     hbox->addWidget(buttonOptions);
     groupbox3->setLayout(hbox);
 
-    grid->addWidget(groupbox1, 0, 0);
+    grid->addWidget(newTestInfoGroupbox, 0, 0);
     grid->addWidget(groupbox3, (numArgs/maxCol) + 1, maxCol - 1, 1, 2);
     newTestsDialog->setLayout(grid);
     //newTestsDialog->layout()->addWidget(scrollArea);
@@ -938,7 +939,7 @@ void VerificationValidationWidget::SetupNewTestSuiteUI() {
     // Get test list from db
     QSqlDatabase db = getDatabase();
     QSqlQuery query(db);
-    query.exec("Select testName, testCommand from Tests ORDER BY id ASC");
+    query.exec("SELECT testName, testCommand FROM Tests ORDER BY id ASC");
     QStringList tests;
     QStringList testCmds;
     while(query.next()){
@@ -1037,7 +1038,7 @@ void VerificationValidationWidget::userInputDialogUI(QListWidgetItem* test) {
             vLayout->addSpacing(15);
 
             QSqlQuery* q = new QSqlQuery(getDatabase());
-            q->prepare("Select arg, defaultVal from TestArg Where testID = :id AND isVarArg = 1 ORDER by argIdx");
+            q->prepare("SELECT arg, defaultVal FROM TestArg WHERE testID = :id AND isVarArg = 1 ORDER by argIdx");
             q->bindValue(":id", testItemMap.at(test).id);
             dbExec(q);
 
@@ -1061,6 +1062,7 @@ void VerificationValidationWidget::userInputDialogUI(QListWidgetItem* test) {
             // NEED HELP: send lineqdit input from fromlayout to updateVarArgs (C++11 lambda expressions)
             // Get input with formLayout-> itemAt -> widget (?)
 
+            delete q;
             connect(setBtn, SIGNAL(clicked()), this, SLOT(updateVarArgs()));
         }
     }
@@ -1087,7 +1089,7 @@ void VerificationValidationWidget::setupUI() {
     // Get test list from db
     QSqlDatabase db = getDatabase();
     QSqlQuery query(db);
-    query.exec("Select id, testName, testCommand, hasValArgs, category from Tests ORDER BY category ASC");
+    query.exec("SELECT id, testName, testCommand, hasValArgs, category FROM Tests ORDER BY category ASC");
 
     QStringList testIdList;
     QStringList tests;
@@ -1140,7 +1142,7 @@ void VerificationValidationWidget::setupUI() {
    	testList->setMinimumWidth(testList->sizeHintForColumn(0)+40);
 
     // Get suite list from db
-    query.exec("Select suiteName from TestSuites ORDER by id ASC");
+    query.exec("SELECT suiteName FROM TestSuites ORDER by id ASC");
     QStringList testSuites;
     while(query.next()){
     	testSuites << query.value(0).toString();
