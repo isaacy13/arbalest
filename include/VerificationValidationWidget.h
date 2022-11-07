@@ -44,6 +44,7 @@ public:
 };
 
 class Dockable;
+
 class VerificationValidationWidget : public QHBoxWidget
 {
 
@@ -51,6 +52,7 @@ class VerificationValidationWidget : public QHBoxWidget
 public:
     explicit VerificationValidationWidget(MainWindow *mainWindow, Document *document, QWidget *parent = nullptr);
     ~VerificationValidationWidget();
+    void updateDockableHeader();
     void showSelectTests();
     void showNewTestDialog();
     void showNewTestSuiteDialog();
@@ -63,7 +65,6 @@ public:
     QString getDBConnectionName() const { return dbConnectionName; }
 
 public slots:
-    QString *runTest(const QString &cmd);
     void runTests();
 
 private slots:
@@ -83,6 +84,7 @@ private slots:
     void updateDbwithNewTest();
     // void updateVarArgs(QString testName, int index, QString input);
     void updateVarArgs();
+    void resultTableChangeSize();
 
 private:
     MainWindow *mainWindow;
@@ -118,7 +120,11 @@ private:
     QGroupBox* newTestInfoGroupbox;
     std::map<QListWidgetItem*, TestItem> testItemMap;
     std::map<int, QListWidgetItem*> testIdMap;
-
+    bool minBtn_toggle;
+    QToolButton* minBtn;
+    std::map<QListWidgetItem*, std::pair<int, VerificationValidation::Test>> itemToTestMap;
+    std::map<int, QListWidgetItem*> idToItemMap;
+    
     // init functions
     void dbConnect(QString dbFilePath);
     void dbInitTables();
@@ -152,6 +158,7 @@ private:
         return true;
     }
 
+    void dbUpdateModelUUID();
     void dbClearResults();
 
     // events
@@ -165,6 +172,8 @@ private:
     void checkSuiteSA();
     void checkTestSA();
     QString constructTestCommand(TestItem item);
+    QString *runTest(const QString &cmd);
+    void validateChecksum();
 };
 
 #endif // VVWIDGET_H

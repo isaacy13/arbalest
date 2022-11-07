@@ -6,6 +6,7 @@
 #define VV_H
 #include <vector>
 #include <list>
+#include <map>
 #include <QString>
 
 namespace VerificationValidation {
@@ -20,6 +21,10 @@ namespace VerificationValidation {
             this->isVariable = isVariable;
             this->defaultValue = defaultValue;
         }
+
+        void updateValue (QString input){
+            defaultValue = input;
+        }
     };
 
     class Test {
@@ -30,6 +35,17 @@ namespace VerificationValidation {
         QString category;
         bool hasVariable;
         std::vector<Arg> ArgList;
+
+        QString getCmdWithArgs() const {
+            QString cmd = testCommand;
+            for(int i = 0; i < ArgList.size(); i++){
+                cmd = cmd + " " + ArgList[i].argument;
+                if(ArgList[i].isVariable){
+                    cmd  += ArgList[i].defaultValue;
+                }
+            }
+            return cmd;
+        }
     };
 
     class Result {
@@ -68,6 +84,7 @@ namespace VerificationValidation {
         const static VerificationValidation::Test NO_INVALID_AIRCODE_REGIONS;
         const static VerificationValidation::Test VALID_TITLE;
         const static std::vector<VerificationValidation::Test> allTests;
+        const static std::map<QString, VerificationValidation::Test> nameToTestMap;
 
         // TODO: missing "No errors when top level drawn"
         // TODO: missing "BoTs are valid"
@@ -77,16 +94,18 @@ namespace VerificationValidation {
 
     class Parser {
     public:
+        static bool catchUsageErrors(Result* r, const QString& currentLine);
+        static void finalDefense(Result* r);
+
         static Result* search(const QString& cmd, const QString* terminalOutput);
-        static void searchSpecificTest(Result* r, const QString& currentLine, const Test* type);
-        static bool searchCatchUsageErrors(Result* r, const QString& currentLine);
         static bool searchDBNotFoundErrors(Result* r);
-        static void searchFinalDefense(Result* r);
+        static void searchSpecificTest(Result* r, const QString& currentLine, const Test* type);
 
         static Result* title(const QString& cmd, const QString* terminalOutput);
 
-        static Result* lc(const QString* terminalOutput);
-        static Result* gqa(const QString* terminalOutput);
+        static Result* lc(const QString& cmd, const QString* terminalOutput, const QString& gFilePath);
+        static Result* gqa(const QString& cmd, const QString* terminalOutput);
+        static void gqaSpecificTest(Result* r, const QString& currentLine, const Test* type);
     };
 }
 
