@@ -208,6 +208,8 @@ void VerificationValidationWidget::runTests() {
         emit mainWindow->setStatusBarMessage(true, i+1, totalTests);
         showResult(testResultID);
     }
+
+    selectTestsDialog->close();
 }
 
 void VerificationValidationWidget::dbConnect(const QString dbFilePath) {
@@ -481,15 +483,18 @@ void VerificationValidationWidget::updateTestListWidget(QListWidgetItem* suite_c
 }
 
 void VerificationValidationWidget::updateSelectedTestList(QListWidgetItem* test_clicked){
+    cout << "why bro" << endl;
     QSqlQuery* q = new QSqlQuery(getDatabase());
     q->prepare("SELECT id FROM Tests WHERE testName = :testName");
     q->bindValue(":testName", test_clicked->text());
     dbExec(q, !SHOW_ERROR_POPUP);
     if (q->first()) {
         if(test_clicked->checkState()) {
+            cout << "why1" << endl;
             selectedTests << q->value(0).toString();
         }
         else {
+            cout << "why2" << endl;
             int index = selectedTests.indexOf(QRegExp(q->value(0).toString()));
             selectedTests.removeAt(index);
         }
@@ -679,6 +684,10 @@ void VerificationValidationWidget::updateDbwithRemovedTest() {
     removeTestDialog->close();
 }
 
+void VerificationValidationWidget::closeSetUpUI() {
+    selectTestsDialog->close();
+}
+
 void VerificationValidationWidget::SetupRemoveTestUI() {
     testList->clear();
     suiteList->clear();
@@ -687,7 +696,7 @@ void VerificationValidationWidget::SetupRemoveTestUI() {
     removeTestDialog = new QDialog();
     removeTestDialog->setModal(true);
     removeTestDialog->setWindowTitle("Remove test");
-
+    cout << "why" << endl;
     // Get test list from db
     QSqlDatabase db = getDatabase();
     QSqlQuery query(db);
@@ -698,7 +707,7 @@ void VerificationValidationWidget::SetupRemoveTestUI() {
     	tests << query.value(0).toString();
         testCmds << query.value(1).toString();
     }
-    
+    cout << "why" << endl;
     // Insert test list into tests checklist widget
     testList->addItems(tests);
     QListWidgetItem* item = 0;
@@ -707,7 +716,7 @@ void VerificationValidationWidget::SetupRemoveTestUI() {
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(Qt::Unchecked);
         }
-
+cout << "why" << endl;
     // Tests checklist add to dialog
    	testList->setMinimumWidth(testList->sizeHintForColumn(0)+40);
 
@@ -717,7 +726,7 @@ void VerificationValidationWidget::SetupRemoveTestUI() {
     searchBox = new QLineEdit("");
     searchBar->addWidget(searchLabel);
     searchBar->addWidget(searchBox);
-	
+	cout << "why" << endl;
     // format and populate Select Tests dialog box
     QGridLayout* grid = new QGridLayout();
     
@@ -728,18 +737,19 @@ void VerificationValidationWidget::SetupRemoveTestUI() {
     r_vbox->addSpacing(5);
     r_vbox->addWidget(testList);
     groupbox2->setLayout(r_vbox);
-    
+    cout << "why" << endl;
     QGroupBox* groupbox3 = new QGroupBox();
     QDialogButtonBox* buttonOptions = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     QHBoxLayout* hbox = new QHBoxLayout();
     hbox->addWidget(buttonOptions);
     groupbox3->setLayout(hbox);
-    
+    cout << "why6" << endl;
     grid->addWidget(groupbox2, 0, 1);
     grid->addWidget(groupbox3, 1, 0, 1, 2);
     removeTestDialog->setLayout(grid);
 	
     // Test select signal connect function
+    cout << "why though" << endl;
     connect(testList, SIGNAL(itemClicked(QListWidgetItem *)), this, SLOT(updateSelectedTestList(QListWidgetItem*)));
 
     // Search button pressed signal select function
@@ -1214,6 +1224,7 @@ void VerificationValidationWidget::setupUI() {
     searchBar->addWidget(searchBox);
 	
     // format and populate Select Tests dialog box
+    selectTestsDialog = new QDialog();
     selectTestsDialog->setModal(true);
     selectTestsDialog->setWindowTitle("Select Tests");
     QGridLayout* grid = new QGridLayout();
@@ -1262,6 +1273,7 @@ void VerificationValidationWidget::setupUI() {
     connect(buttonOptions, &QDialogButtonBox::accepted, selectTestsDialog, &QDialog::accept);
     connect(buttonOptions, &QDialogButtonBox::accepted, this, &VerificationValidationWidget::runTests);
     connect(buttonOptions, &QDialogButtonBox::rejected, selectTestsDialog, &QDialog::reject);
+    connect(buttonOptions, &QDialogButtonBox::rejected, this, &VerificationValidationWidget::closeSetUpUI);
     // Open details dialog
     connect(resultTable, SIGNAL(cellDoubleClicked(int, int)), this, SLOT(setupDetailedResult(int, int)));
 }

@@ -66,7 +66,8 @@ public:
 
 public slots:
     void runTests();
-
+    void closeSetUpUI();
+    
 private slots:
 	void updateSuiteSelectAll(QListWidgetItem*);
 	void updateTestSelectAll(QListWidgetItem*);
