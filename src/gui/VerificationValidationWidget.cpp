@@ -483,18 +483,15 @@ void VerificationValidationWidget::updateTestListWidget(QListWidgetItem* suite_c
 }
 
 void VerificationValidationWidget::updateSelectedTestList(QListWidgetItem* test_clicked){
-    cout << "why bro" << endl;
     QSqlQuery* q = new QSqlQuery(getDatabase());
     q->prepare("SELECT id FROM Tests WHERE testName = :testName");
     q->bindValue(":testName", test_clicked->text());
     dbExec(q, !SHOW_ERROR_POPUP);
     if (q->first()) {
         if(test_clicked->checkState()) {
-            cout << "why1" << endl;
             selectedTests << q->value(0).toString();
         }
         else {
-            cout << "why2" << endl;
             int index = selectedTests.indexOf(QRegExp(q->value(0).toString()));
             selectedTests.removeAt(index);
         }
@@ -692,11 +689,12 @@ void VerificationValidationWidget::SetupRemoveTestUI() {
     testList->clear();
     suiteList->clear();
     selectedTests.clear();
+    testList = new QListWidget();
 
     removeTestDialog = new QDialog();
     removeTestDialog->setModal(true);
     removeTestDialog->setWindowTitle("Remove test");
-    cout << "why" << endl;
+
     // Get test list from db
     QSqlDatabase db = getDatabase();
     QSqlQuery query(db);
@@ -707,7 +705,7 @@ void VerificationValidationWidget::SetupRemoveTestUI() {
     	tests << query.value(0).toString();
         testCmds << query.value(1).toString();
     }
-    cout << "why" << endl;
+
     // Insert test list into tests checklist widget
     testList->addItems(tests);
     QListWidgetItem* item = 0;
@@ -716,7 +714,7 @@ void VerificationValidationWidget::SetupRemoveTestUI() {
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(Qt::Unchecked);
         }
-cout << "why" << endl;
+
     // Tests checklist add to dialog
    	testList->setMinimumWidth(testList->sizeHintForColumn(0)+40);
 
@@ -726,7 +724,7 @@ cout << "why" << endl;
     searchBox = new QLineEdit("");
     searchBar->addWidget(searchLabel);
     searchBar->addWidget(searchBox);
-	cout << "why" << endl;
+	
     // format and populate Select Tests dialog box
     QGridLayout* grid = new QGridLayout();
     
@@ -737,26 +735,23 @@ cout << "why" << endl;
     r_vbox->addSpacing(5);
     r_vbox->addWidget(testList);
     groupbox2->setLayout(r_vbox);
-    cout << "why" << endl;
+    
     QGroupBox* groupbox3 = new QGroupBox();
-    QDialogButtonBox* buttonOptions = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    QDialogButtonBox* buttonOptions = new QDialogButtonBox(QDialogButtonBox::Ok);
     QHBoxLayout* hbox = new QHBoxLayout();
     hbox->addWidget(buttonOptions);
     groupbox3->setLayout(hbox);
-    cout << "why6" << endl;
+
     grid->addWidget(groupbox2, 0, 1);
     grid->addWidget(groupbox3, 1, 0, 1, 2);
     removeTestDialog->setLayout(grid);
 	
     // Test select signal connect function
-    cout << "why though" << endl;
     connect(testList, SIGNAL(itemClicked(QListWidgetItem *)), this, SLOT(updateSelectedTestList(QListWidgetItem*)));
-
     // Search button pressed signal select function
     connect(searchBox, SIGNAL(textEdited(const QString &)), this, SLOT(searchTests(const QString &)));
 
     connect(buttonOptions, SIGNAL(clicked(QAbstractButton *)), this, SLOT(updateDbwithRemovedTest()));
-    connect(buttonOptions, &QDialogButtonBox::rejected, removeTestDialog, &QDialog::reject);
 
     removeTestDialog->exec();
 }
@@ -765,6 +760,7 @@ void VerificationValidationWidget::SetupRemoveTestSuiteUI() {
     testList->clear();
     suiteList->clear();
     selectedTests.clear();
+    suiteList = new QListWidget();
 
     removeTestSuiteDialog = new QDialog();
     removeTestSuiteDialog->setModal(true);
@@ -956,6 +952,7 @@ void VerificationValidationWidget::SetupNewTestSuiteUI() {
     testList->clear();
     suiteList->clear();
     selectedTests.clear();
+    testList = new QListWidget();
 
     newTestSuiteDialog = new QDialog();
     newTestSuiteDialog->setModal(true);
