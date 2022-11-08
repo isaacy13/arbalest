@@ -620,24 +620,16 @@ void VerificationValidationWidget::updateDbwithRemovedSuite() {
 void VerificationValidationWidget::updateDbwithNewTest() {
     QSqlQuery* q = new QSqlQuery(getDatabase());
 
-    bool isVariable = false;
-    for (int i = 0; i < groupBoxVector.size(); i++) {
-        QList<QCheckBox*> checkboxList = groupBoxVector.at(i)->findChildren<QCheckBox*>();
-        if (checkboxList.at(0)->isChecked())
-            isVariable = true;
-    }
-
     QList<QLineEdit*> testInfoList = newTestInfoGroupbox->findChildren<QLineEdit*>();
     QString name = testInfoList.at(0)->text();
     QString command = testInfoList.at(1)->text();
-    QString catagory = testInfoList.at(2)->text();
+    //QString catagory = testInfoList.at(2)->text();
 
-    q->prepare("INSERT INTO Tests (testName, testCommand, hasValArgs, category) VALUES (?, ?, ?, ?)");
+    q->prepare("INSERT INTO Tests (testName, category) VALUES (?, ?)");
     q->addBindValue(name);
     q->addBindValue(command);
-    q->addBindValue(isVariable);
-    q->addBindValue(catagory);
-    dbExec(q); 
+    //q->addBindValue(catagory);
+    dbExec(q);
 
     QString testID = q->lastInsertId().toString();
 
@@ -651,22 +643,23 @@ void VerificationValidationWidget::updateDbwithNewTest() {
             QList<QCheckBox*> boolList = groupBoxVector.at(i)->findChildren<QCheckBox*>();
 
             QString defaultValue = textList.at(1)->text();
-            bool isVariable = boolList.at(0)->isChecked();
 
-            if (isVariable) {
-                q->prepare("INSERT INTO TestArg (testID, argIdx, arg, isVarArg, defaultVal) VALUES (?, ?, ?, ?, ?)");
+            Arg::Type type = Arg::Type::Static;
+            if (boolList.at(0)->isChecked()) {
+                type = Arg::Type::Dynamic;
+                q->prepare("INSERT INTO TestArg (testID, argIdx, arg, argType, defaultVal) VALUES (?, ?, ?, ?, ?)");
                 q->addBindValue(testID);
                 q->addBindValue(i);
                 q->addBindValue(arg);
-                q->addBindValue(isVariable);
+                q->addBindValue(type);
                 q->addBindValue(defaultValue);
             }
             else {
-                q->prepare("INSERT INTO TestArg (testID, argIdx, arg, isVarArg) VALUES (?, ?, ?, ?)");
+                q->prepare("INSERT INTO TestArg (testID, argIdx, arg, argType) VALUES (?, ?, ?, ?)");
                 q->addBindValue(testID);
                 q->addBindValue(i);
                 q->addBindValue(arg);
-                q->addBindValue(isVariable);
+                q->addBindValue(type);
             }
 
             dbExec(q); 
@@ -760,7 +753,7 @@ void VerificationValidationWidget::SetupRemoveTestUI() {
     // Get test list from db
     QSqlDatabase db = getDatabase();
     QSqlQuery query(db);
-    query.exec("SELECT testName, testCommand FROM Tests ORDER BY id ASC");
+    query.exec("SELECT testName, category FROM Tests ORDER BY id ASC");
     QStringList tests;
     QStringList testCmds;
     while(query.next()){
@@ -867,7 +860,7 @@ void VerificationValidationWidget::SetupRemoveTestSuiteUI() {
     groupbox2->setLayout(r_vbox);
     
     QGroupBox* groupbox3 = new QGroupBox();
-    QDialogButtonBox* buttonOptions = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    QDialogButtonBox* buttonOptions = new QDialogButtonBox(QDialogButtonBox::Ok);
     QHBoxLayout* hbox = new QHBoxLayout();
     hbox->addWidget(buttonOptions);
     groupbox3->setLayout(hbox);
@@ -883,7 +876,6 @@ void VerificationValidationWidget::SetupRemoveTestSuiteUI() {
     connect(searchBox, SIGNAL(textEdited(const QString &)), this, SLOT(searchSuites(const QString &)));
 
     connect(buttonOptions, SIGNAL(clicked(QAbstractButton *)), this, SLOT(updateDbwithRemovedSuite()));
-    connect(buttonOptions, &QDialogButtonBox::rejected, removeTestSuiteDialog, &QDialog::reject);
 
     removeTestSuiteDialog->exec();
 }
@@ -918,11 +910,13 @@ void VerificationValidationWidget::SetupNewTestUI() {
     testCommand->addWidget(newCommandBox);
 
     // New test catagory
+    /*
     QHBoxLayout* testCatagory = new QHBoxLayout();
     QLabel* catagoryLabel = new QLabel("Test catagory: ");
     QLineEdit* newCatagoryBox = new QLineEdit();
     testCatagory->addWidget(catagoryLabel);
     testCatagory->addWidget(newCatagoryBox);
+    */
 
     newTestInfoGroupbox = new QGroupBox("Test List");
     QVBoxLayout* r_vbox = new QVBoxLayout();
@@ -930,8 +924,8 @@ void VerificationValidationWidget::SetupNewTestUI() {
     r_vbox->addSpacing(5);
     r_vbox->addLayout(testCommand);
     r_vbox->addSpacing(5);
-    r_vbox->addLayout(testCatagory);
-    r_vbox->addSpacing(5);
+    //r_vbox->addLayout(testCatagory);
+    //r_vbox->addSpacing(5);
     r_vbox->addSpacing(5);
     newTestInfoGroupbox->setLayout(r_vbox);
 
@@ -1023,7 +1017,7 @@ void VerificationValidationWidget::SetupNewTestSuiteUI() {
     // Get test list from db
     QSqlDatabase db = getDatabase();
     QSqlQuery query(db);
-    query.exec("SELECT testName, testCommand FROM Tests ORDER BY id ASC");
+    query.exec("SELECT testName, category FROM Tests ORDER BY id ASC");
     QStringList tests;
     QStringList testCmds;
     while(query.next()){
@@ -1072,7 +1066,7 @@ void VerificationValidationWidget::SetupNewTestSuiteUI() {
     groupbox2->setLayout(r_vbox);
     
     QGroupBox* groupbox3 = new QGroupBox();
-    QDialogButtonBox* buttonOptions = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    QDialogButtonBox* buttonOptions = new QDialogButtonBox(QDialogButtonBox::Ok);
     QHBoxLayout* hbox = new QHBoxLayout();
     hbox->addWidget(buttonOptions);
     groupbox3->setLayout(hbox);
@@ -1089,7 +1083,6 @@ void VerificationValidationWidget::SetupNewTestSuiteUI() {
     connect(searchBox, SIGNAL(textEdited(const QString &)), this, SLOT(searchTests(const QString &)));
 
     connect(buttonOptions, SIGNAL(clicked(QAbstractButton *)), this, SLOT(updateDbwithNewSuite()));
-    connect(buttonOptions, &QDialogButtonBox::rejected, newTestSuiteDialog, &QDialog::reject);
 
     newTestSuiteDialog->exec();
 }
@@ -1182,7 +1175,7 @@ void VerificationValidationWidget::setupUI() {
     // Get test list from db
     QSqlDatabase db = getDatabase();
     QSqlQuery query(db);
-    query.exec("SELECT id, testName, testCommand, hasValArgs, category FROM Tests ORDER BY category ASC");
+    query.exec("SELECT id, testName, category FROM Tests ORDER BY category ASC");
 
     QStringList testIdList;
     QStringList testNameList;
