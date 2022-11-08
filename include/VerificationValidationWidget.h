@@ -22,6 +22,8 @@
 #define TEST_NAME_COLUMN 1
 #define DESCRIPTION_COLUMN 2
 #define OBJPATH_COLUMN 3
+#define OBJECT_COLUMN 4
+#define TEST_RESULT_ID_COLUMN 5
 
 #define NO_SELECTION -1
 #define OPEN 0
@@ -44,6 +46,8 @@ public:
 };
 
 class Dockable;
+using Arg = VerificationValidation::Arg;
+using Test = VerificationValidation::Test;
 
 class VerificationValidationWidget : public QHBoxWidget
 {
