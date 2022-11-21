@@ -4,9 +4,7 @@
 #include "MgedWidget.h"
 #include "Document.h"
 
-// TODO: test undo/redo, select all -> delete, etc.
-// TODO: fix shortcuts (e.g.: fn+left)
-// TODO: implement CTRL+C
+// TODO: implement CTRL+C?
 // TODO: consider case where baseCurPos overflows
 
 MgedWidget::MgedWidget(Document* d, QWidget* parent) : QPlainTextEdit(TERMINAL_PREFIX), d(d), prefix(TERMINAL_PREFIX), baseCurPos(prefix.size()) {}
@@ -14,9 +12,10 @@ MgedWidget::MgedWidget(Document* d, QWidget* parent) : QPlainTextEdit(TERMINAL_P
 void MgedWidget::keyPressEvent(QKeyEvent* event) {
 	QTextCursor cursor = textCursor();
 	int key = event->key();
+
 	if (key != Qt::Key_Up && key != Qt::Key_Down && key != Qt::Key_Left && key != Qt::Key_Right) {
 		if (cursor.position() == baseCurPos && key == Qt::Key_Backspace) return;
-		else if (cursor.position() < baseCurPos) {
+		else if (cursor.position() < baseCurPos || cursor.selectionStart() < baseCurPos) {
 			cursor.setPosition(baseCurPos);
 			setTextCursor(cursor);
 			return;
@@ -35,15 +34,18 @@ void MgedWidget::keyPressEvent(QKeyEvent* event) {
 			return;
 		}
 
-		struct ged* dbp = mgedRun(cmd, *(d->getFilePath()));
-		QString* result = (dbp) ? new QString(bu_vls_addr(dbp->ged_result_str)) : nullptr;
-		if (dbp) ged_close(dbp);
+		QString result = mgedRun(cmd, *(d->getFilePath()));
+		insertPlainText(result);
 
-		if (result) insertPlainText(*result);
+		// TODO: currently no method in ObjectTreeWidget to refresh names (e.g.: "mv all tmp" -> should refresh object names)
+		d->getGeometryRenderer()->refreshForVisibilityAndSolidChanges();
+		d->getDisplayGrid()->forceRerenderAllDisplays();
+		d->getObjectTreeWidget()->refreshItemTextColors();
 
 		insertPlainText("\n");
 		insertPlainText(prefix);
 		baseCurPos = textCursor().position();
+		document()->clearUndoRedoStacks();
 	}
 }
 
