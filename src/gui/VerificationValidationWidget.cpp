@@ -313,6 +313,8 @@ void VerificationValidationWidget::dbInitTables() {
         delete dbExec("CREATE TABLE TestsInSuite (id INTEGER PRIMARY KEY, testSuiteID INTEGER NOT NULL, testID INTEGER NOT NULL)");
     if (!getDatabase().tables().contains("TestArg"))
         delete dbExec("CREATE TABLE TestArg (id INTEGER PRIMARY KEY, testID INTEGER NOT NULL, argIdx INTEGER NOT NULL, arg TEXT NOT NULL, argType INTEGER NOT NULL, defaultVal TEXT)");
+    if (!getDatabase().tables().contains("RunningTests"))
+        delete dbExec("CREATE TABLE TestSuites (id INTEGER PRIMARY KEY, testID TEXT NOT NULL, hasFinished BOOLEAN NOT NULL, objectPath TEXT NOT NULL)");
 }
 
 void VerificationValidationWidget::dbPopulateDefaults() {
@@ -1693,6 +1695,10 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
                 iconPath = ":/icons/warning.png";
                 error_type = 2;
             }        
+
+            // setting the elide mode decides were ... is placed in table cells (left middle right or none)
+            // unfortunatly its bugged an doesn't work
+            //resultTable->setTextElideMode(Qt::ElideLeft);
 
             // Change to hide icon image path from showing
             resultTable->setItem(resultTable->rowCount()-1, RESULT_CODE_COLUMN, new QTableWidgetItem(QIcon(iconPath), ""));
