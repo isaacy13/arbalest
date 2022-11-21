@@ -117,12 +117,14 @@ private slots:
     void showResult(const QString& testResultID);
     void performQueryRequest(const QString& query, const QStringList& args, QList<QList<QVariant>>* answer, const int& numAnswersExpected);
     void performQueryRequest(const QString& query, const QStringList& args, QString& lastInsertId);
+    void testStartAndThreadSetUp();
 
 private:
     MainWindow *mainWindow;
     Dockable *parentDockable;
     int msgBoxRes;
     QString cacheFolder;
+    bool hasUnfinishedTests = false;
 
     // widget-specific data
     Document *document;
