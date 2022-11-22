@@ -143,7 +143,7 @@ void VerificationValidationWidget::dbInitTables() {
     if (!getDatabase().tables().contains("TestArg"))
         delete dbExec("CREATE TABLE TestArg (id INTEGER PRIMARY KEY, testID INTEGER NOT NULL, argIdx INTEGER NOT NULL, arg TEXT NOT NULL, argType INTEGER NOT NULL, defaultVal TEXT)");
     if (!getDatabase().tables().contains("RunningTests"))
-        delete dbExec("CREATE TABLE RunningTests (id INTEGER PRIMARY KEY, testID TEXT NOT NULL, hasFinished BOOLEAN NOT NULL)");
+        delete dbExec("CREATE TABLE RunningTests (id INTEGER PRIMARY KEY, testID TEXT NOT NULL, hasFinished TEXT NOT NULL)");
     if (!getDatabase().tables().contains("ObjectTree"))
         delete dbExec("CREATE TABLE ObjectTree (id INTEGER PRIMARY KEY, object TEXT NOT NULL)");
 }
@@ -1172,9 +1172,9 @@ void VerificationValidationWidget::setupUI() {
 
     QSqlQuery* query2 = new QSqlQuery(getDatabase());
 
-    QString str = "false";
+    QString str = "0";
     query->prepare("SELECT testID FROM RunningTests WHERE hasFinished = ?");
-    query2->addBindValue(str);
+    query->addBindValue(str);
     query->exec();
 
     if (query->next()) {
@@ -1254,7 +1254,7 @@ void VerificationValidationWidget::testStartAndThreadSetUp() {
 
         // POPULATE SELECTED OBJECTS TABLE
         for (QString object : selectedObjects) {
-            query->prepare("INSERT INTO ObjectTree object VALUES (?)");
+            query->prepare("INSERT INTO ObjectTree (object) VALUES (?)");
             query->addBindValue(object);
             query->exec();
         }
@@ -1265,9 +1265,9 @@ void VerificationValidationWidget::testStartAndThreadSetUp() {
             query->addBindValue(item->text());
             query->exec();
 
-            QString str = "false";
+            int str = 0;
             query->first();
-            query2->prepare("INSERT INTO RunningTests testID, hasFinished VALUES (?, ?)");
+            query2->prepare("INSERT INTO RunningTests (testID, hasFinished) VALUES (?, ?)");
             query2->addBindValue(query->value(0));
             query2->addBindValue(str);
             query2->exec();
@@ -1919,6 +1919,11 @@ void MgedWorker::run() {
             emit updateStatusBarRequest(true, i + 1, totalTests, objIdx + 1, selectedObjects.size());
             emit updateProgressBarRequest((totalTests * objIdx) + i + 1, totalTests * selectedObjects.size());
             emit showResultRequest(testResultID);
+
+            // update running list with finished test
+            QString str = "1";
+            emit queryRequest("UPDATE RunningTests SET hasFinished = ? WHERE testID = ?", 
+                { str, QString::number(testID) });
         }
     }
 
