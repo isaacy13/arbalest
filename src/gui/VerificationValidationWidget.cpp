@@ -1393,6 +1393,7 @@ void VerificationValidationWidget::setupUI() {
         });
 
         this->runningTests = true;
+        if (vvProgressBar) vvProgressBar->setStyleSheet("QProgressBar::chunk {background: #00CA00;}");
         emit updateVerifyValidateAct(this->document);
         mgedWorkerThread->start();
     });
@@ -1842,6 +1843,7 @@ void VerificationValidationWidget::updateDockableHeader() {
         vvProgressBar->setOrientation(Qt::Horizontal);
         vvProgressBar->setRange(0, 100);
         vvProgressBar->setVisible(false);
+        vvProgressBar->setStyleSheet("QProgressBar::chunk {background: #CC0202;}");
 
         QVBoxWidget* titleWidget = new QVBoxWidget;
         titleWidget->addWidget(topRow);

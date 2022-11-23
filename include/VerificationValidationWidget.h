@@ -81,6 +81,9 @@ public:
         if (!mgedWorkerThread) return;
         if (!mgedWorkerThread->isInterruptionRequested()) mgedWorkerThread->requestInterruption();
         else popup("Please wait... terminating tasks...");
+        
+        if (!vvProgressBar) return;
+        vvProgressBar->setStyleSheet("QProgressBar::chunk {background: #CC0202;}");
     }
 
     void showNewTestDialog();
