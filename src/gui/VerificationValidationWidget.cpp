@@ -90,13 +90,14 @@ void VerificationValidationWidget::exportToCSV(){
 
         std::ofstream csvFile;
         csvFile.open(filePath.toStdString());
+        // CSV Header
+        csvFile << "Error Type,Test Name,Description,Issue Object,Full Path\n";
 
         QSqlQuery* q = new QSqlQuery(getDatabase());
         QSqlQuery* q1 = new QSqlQuery(getDatabase());
         QSqlQuery* q2 = new QSqlQuery(getDatabase());
         QSqlQuery* q3 = new QSqlQuery(getDatabase());
         q->prepare("SELECT Tests.testName, TestResults.id, TestResults.resultCode, TestResults.terminalOutput FROM Tests INNER JOIN TestResults ON Tests.id=TestResults.testID");
-        // q->addBindValue(10);
         dbExec(q);
         while(q->next()){
             QString testName = q->value(0).toString();
@@ -104,7 +105,6 @@ void VerificationValidationWidget::exportToCSV(){
             int resultCode = q->value(2).toInt();
             QString terminalOutput = q->value(3).toString();
 
-            
             q1->prepare("SELECT TestArg.arg FROM TestArg INNER JOIN TestResults ON TestArg.id = TestResults.objectArgID WHERE TestResults.id = ?");
             q1->addBindValue(testResultID);
             dbExec(q1);
@@ -118,14 +118,19 @@ void VerificationValidationWidget::exportToCSV(){
 
             if (resultCode == Result::Code::PASSED) {
                 csvFile << "Passed" << ",";
-                csvFile << addDoubleQuote(testName).toStdString() << ",";
-                csvFile << addDoubleQuote(object).toStdString() << "\n";
+                csvFile << addDoubleQuote(testName).toStdString() << "\n";
             } else if (resultCode == Result::Code::UNPARSEABLE) {
                 csvFile << "Unparseable" << ",";
                 csvFile << addDoubleQuote(testName).toStdString() << ",";
-                csvFile << addDoubleQuote(object).toStdString() << "\n";
+                q2->prepare("SELECT terminalOutput FROM TestResults WHERE id = ?");
+                q2->addBindValue(testResultID);
+                dbExec(q2, !SHOW_ERROR_POPUP);
+
+                while (q2->next()) {
+                    QString terminalOutput = q2->value(0).toString().replace("\n", "");;
+                    csvFile << addDoubleQuote(terminalOutput).toStdString() << "\n";
+                }
             } else {
-                
                 q2->prepare("SELECT objectIssueID FROM Issues WHERE testResultID = ?");
                 q2->addBindValue(testResultID);
                 dbExec(q2, !SHOW_ERROR_POPUP);
@@ -147,10 +152,12 @@ void VerificationValidationWidget::exportToCSV(){
                         else if (resultCode == VerificationValidation::Result::Code::WARNING){
                             csvFile << "Warning" << ",";
                         }
+                        
+                        QStringList objectTree = objectName.split("/");
 
                         csvFile << addDoubleQuote(testName).toStdString() << ",";
-                        csvFile << addDoubleQuote(object).toStdString() << ",";
                         csvFile << addDoubleQuote(issueDescription).toStdString() << ",";
+                        csvFile << addDoubleQuote(objectTree.at(objectTree.size()-1)).toStdString() << ",";
                         csvFile << addDoubleQuote(objectName).toStdString() << "\n";
                     }
                 }
@@ -1157,6 +1164,7 @@ void VerificationValidationWidget::userInputDialogUI(QListWidgetItem* test) {
 }
 
 void VerificationValidationWidget::resizeEvent(QResizeEvent* event) {
+    std::cout << 1 << std::endl;
     resultTable->setColumnWidth(RESULT_CODE_COLUMN, this->width() * 0.025);
     resultTable->setColumnWidth(TEST_NAME_COLUMN, this->width() * 0.175);
     resultTable->setColumnWidth(DESCRIPTION_COLUMN, this->width() * 0.375);
@@ -1175,7 +1183,7 @@ void VerificationValidationWidget::setupUI() {
 
     // setup result table's column headers
     QStringList columnLabels;
-    columnLabels << "Type" << "Test Name" << "Description" << "Object Path" << "Object Tested";
+    columnLabels << "Type" << "Test Name" << "Description" << "Issue Object" << "Full Path";
     resultTable->setColumnCount(columnLabels.size() + 3); // add hidden columns for testResultID + object
     resultTable->setHorizontalHeaderLabels(columnLabels);
     resultTable->verticalHeader()->setVisible(false);
@@ -1312,8 +1320,6 @@ void VerificationValidationWidget::setupUI() {
 
     resultTable->setShowGrid(false);
     resultTable->setStyleSheet("QTableWidget::item {border-bottom: 0.5px solid #3C3C3C;}");
-    resultTable->setColumnHidden(TEST_RESULT_ID_COLUMN, true);
-    resultTable->resizeColumnsToContents();
     resultTable->setColumnHidden(RESULT_TABLE_IDX, true);
     resultTable->setColumnHidden(ERROR_TYPE, true);
     resultTable->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -1659,16 +1665,6 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
     int resultCode = q->value(1).toInt();
     QString terminalOutput = q->value(2).toString();
 
-    q->prepare("SELECT TestArg.arg FROM TestArg INNER JOIN TestResults ON TestArg.id = TestResults.objectArgID WHERE TestResults.id = ?");
-    q->addBindValue(testResultID);
-    dbExec(q);
-
-    if (!q->next()) {
-        popup("Failed to grab associated object for test result #" + testResultID);
-        return;
-    }
-
-    QString object = q->value(0).toString();
     QString iconPath = "";
     QString objectName;
     QString issueDescription;
@@ -1678,8 +1674,6 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
         iconPath = ":/icons/passed.png";
         resultTable->setItem(resultTable->rowCount()-1, RESULT_CODE_COLUMN, new QTableWidgetItem(QIcon(iconPath), ""));
         resultTable->setItem(resultTable->rowCount()-1, TEST_NAME_COLUMN, new QTableWidgetItem(testName));
-        resultTable->setItem(resultTable->rowCount()-1, TEST_RESULT_ID_COLUMN, new QTableWidgetItem(testResultID));
-        resultTable->setItem(resultTable->rowCount()-1, OBJECT_COLUMN, new QTableWidgetItem(object));
         resultTable->setItem(resultTable->rowCount()-1, RESULT_TABLE_IDX, new QTableWidgetItem(QString::number(resultTable->rowCount()-1)));
         resultTable->setItem(resultTable->rowCount()-1, ERROR_TYPE, new QTableWidgetItem(QString::number(4)));
     } 
@@ -1689,8 +1683,6 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
         iconPath = ":/icons/unparseable.png";
         resultTable->setItem(resultTable->rowCount()-1, RESULT_CODE_COLUMN, new QTableWidgetItem(QIcon(iconPath), ""));
         resultTable->setItem(resultTable->rowCount()-1, TEST_NAME_COLUMN, new QTableWidgetItem(testName));
-        resultTable->setItem(resultTable->rowCount()-1, TEST_RESULT_ID_COLUMN, new QTableWidgetItem(testResultID));
-        resultTable->setItem(resultTable->rowCount()-1, OBJECT_COLUMN, new QTableWidgetItem(object));
         resultTable->setItem(resultTable->rowCount()-1, RESULT_TABLE_IDX, new QTableWidgetItem(QString::number(resultTable->rowCount()-1)));
         resultTable->setItem(resultTable->rowCount()-1, ERROR_TYPE, new QTableWidgetItem(QString::number(3)));
     }
@@ -1729,13 +1721,14 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
                 error_type = 2;
             }        
 
+            QStringList objectTree = objectName.split("/");
+
             // Change to hide icon image path from showing
             resultTable->setItem(resultTable->rowCount()-1, RESULT_CODE_COLUMN, new QTableWidgetItem(QIcon(iconPath), ""));
             resultTable->setItem(resultTable->rowCount()-1, TEST_NAME_COLUMN, new QTableWidgetItem(testName));
             resultTable->setItem(resultTable->rowCount()-1, DESCRIPTION_COLUMN, new QTableWidgetItem(issueDescription));
+            resultTable->setItem(resultTable->rowCount()-1, OBJECT_COLUMN, new QTableWidgetItem(objectTree.at(objectTree.size()-1)));
             resultTable->setItem(resultTable->rowCount()-1, OBJPATH_COLUMN, new QTableWidgetItem(objectName));
-            resultTable->setItem(resultTable->rowCount()-1, TEST_RESULT_ID_COLUMN, new QTableWidgetItem(testResultID));
-            resultTable->setItem(resultTable->rowCount()-1, OBJECT_COLUMN, new QTableWidgetItem(object));
             resultTable->setItem(resultTable->rowCount()-1, RESULT_TABLE_IDX, new QTableWidgetItem(QString::number(resultTable->rowCount()-1)));
             resultTable->setItem(resultTable->rowCount()-1, ERROR_TYPE, new QTableWidgetItem(QString::number(error_type)));
 
