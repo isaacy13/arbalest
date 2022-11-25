@@ -1209,8 +1209,8 @@ void VerificationValidationWidget::setupUI() {
             resultTable->setColumnWidth(RESULT_CODE_COLUMN, this->width() * 0.025);
             resultTable->setColumnWidth(TEST_NAME_COLUMN, this->width() * 0.075);
             resultTable->setColumnWidth(DESCRIPTION_COLUMN, this->width() * 0.225);
-            resultTable->setColumnWidth(OBJPATH_COLUMN, this->width() * 0.10);
-            resultTable->setColumnWidth(OBJECT_COLUMN, this->width() * 0.075);
+            resultTable->setColumnWidth(OBJECT_COLUMN, this->width() * 0.1);
+            resultTable->setColumnWidth(OBJPATH_COLUMN, this->width() * 0.05);
         } else {
             resultTable->setColumnWidth(RESULT_CODE_COLUMN, this->width() * 0.025);
             resultTable->setColumnWidth(TEST_NAME_COLUMN, this->width() * 0.175);
