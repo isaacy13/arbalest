@@ -1145,12 +1145,11 @@ void VerificationValidationWidget::userInputDialogUI(QListWidgetItem* test) {
 }
 
 void VerificationValidationWidget::resizeEvent(QResizeEvent* event) {
-    std::cout << 1 << std::endl;
     resultTable->setColumnWidth(RESULT_CODE_COLUMN, this->width() * 0.025);
     resultTable->setColumnWidth(TEST_NAME_COLUMN, this->width() * 0.175);
-    resultTable->setColumnWidth(DESCRIPTION_COLUMN, this->width() * 0.375);
-    resultTable->setColumnWidth(OBJPATH_COLUMN, this->width() * 0.35);
-    resultTable->setColumnWidth(OBJECT_COLUMN, this->width() * 0.075);
+    resultTable->setColumnWidth(DESCRIPTION_COLUMN, this->width() * 0.35);
+    resultTable->setColumnWidth(OBJECT_COLUMN, this->width() * 0.1);
+    resultTable->setColumnWidth(OBJPATH_COLUMN, this->width() * 0.325);
 
     QHBoxWidget::resizeEvent(event);
 }
@@ -1165,7 +1164,7 @@ void VerificationValidationWidget::setupUI() {
     // setup result table's column headers
     QStringList columnLabels;
     columnLabels << "Type" << "Test Name" << "Description" << "Issue Object" << "Full Path";
-    resultTable->setColumnCount(columnLabels.size() + 3); // add hidden columns for testResultID + object
+    resultTable->setColumnCount(columnLabels.size() + 2); // add hidden columns for testResultID + object
     resultTable->setHorizontalHeaderLabels(columnLabels);
     resultTable->verticalHeader()->setVisible(false);
     resultTable->horizontalHeader()->setStretchLastSection(true);
@@ -1173,7 +1172,7 @@ void VerificationValidationWidget::setupUI() {
     
     QHeaderView* header = resultTable->horizontalHeader();
     
-    resultTableSortIdx = 6;
+    resultTableSortIdx = RESULT_TABLE_IDX;
     connect(header, &QHeaderView::sectionClicked, [this](int idx){
         if(idx == resultTableSortIdx){
             resultTable->horizontalHeaderItem(idx)->setForeground(QBrush(QColor("#4b4b4b")));
@@ -1215,9 +1214,9 @@ void VerificationValidationWidget::setupUI() {
         } else {
             resultTable->setColumnWidth(RESULT_CODE_COLUMN, this->width() * 0.025);
             resultTable->setColumnWidth(TEST_NAME_COLUMN, this->width() * 0.175);
-            resultTable->setColumnWidth(DESCRIPTION_COLUMN, this->width() * 0.375);
-            resultTable->setColumnWidth(OBJPATH_COLUMN, this->width() * 0.35);
-            resultTable->setColumnWidth(OBJECT_COLUMN, this->width() * 0.075);
+            resultTable->setColumnWidth(DESCRIPTION_COLUMN, this->width() * 0.35);
+            resultTable->setColumnWidth(OBJECT_COLUMN, this->width() * 0.1);
+            resultTable->setColumnWidth(OBJPATH_COLUMN, this->width() * 0.325);
         }
     });
 
