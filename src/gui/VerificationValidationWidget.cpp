@@ -1154,6 +1154,41 @@ void VerificationValidationWidget::resizeEvent(QResizeEvent* event) {
     QHBoxWidget::resizeEvent(event);
 }
 
+void VerificationValidationWidget::pathDisplayOptimize(int idx, int oldSize, int newSize){
+    if(idx != 4)
+        return;
+    
+    if(!parentDockable->widget()->isVisible())
+        return;
+    
+    QSqlQuery* q = new QSqlQuery(getDatabase());
+    
+    for(int i = 0; i < resultTable->rowCount(); i++){
+        if(resultTable->item(i, idx)){
+            q->prepare("SELECT objectName FROM ObjectIssue WHERE id = ?");
+            q->addBindValue(resultTable->item(i, ISSUE_ID)->text());
+            dbExec(q);
+            QString path;
+            while(q->next()){
+                path = q->value(0).toString();
+            }
+            
+            if(newSize/float(path.size()) < 6.5){
+                QStringList dirTree = path.split("/");
+                if(dirTree.length() <= 2){
+                    continue;
+                } else if (dirTree.length() == 3){
+                    path = "/.../"+dirTree[2];
+                } else {
+                    path = "/"+dirTree[1] + "/.../" + dirTree[dirTree.size()-1];
+                }
+            }
+            
+            resultTable->item(i, idx)->setText(path);
+        }
+    }
+}
+
 void VerificationValidationWidget::setupUI() {    
     selectTestsDialog = new QDialog();
     testList = new QListWidget();
@@ -1164,7 +1199,7 @@ void VerificationValidationWidget::setupUI() {
     // setup result table's column headers
     QStringList columnLabels;
     columnLabels << "Type" << "Test Name" << "Description" << "Issue Object" << "Full Path";
-    resultTable->setColumnCount(columnLabels.size() + 2); // add hidden columns for testResultID + object
+    resultTable->setColumnCount(columnLabels.size() + 3); // add hidden columns for testResultID + object
     resultTable->setHorizontalHeaderLabels(columnLabels);
     resultTable->verticalHeader()->setVisible(false);
     resultTable->horizontalHeader()->setStretchLastSection(true);
@@ -1190,6 +1225,8 @@ void VerificationValidationWidget::setupUI() {
             resultTableSortIdx = idx;
         }
     });
+
+    connect(header, SIGNAL(sectionResized(int,int,int)), this, SLOT(pathDisplayOptimize(int,int,int)));
 
     addWidget(resultTable);
 
@@ -1300,6 +1337,7 @@ void VerificationValidationWidget::setupUI() {
     resultTable->setStyleSheet("QTableWidget::item {border-bottom: 0.5px solid #3C3C3C;}");
     resultTable->setColumnHidden(RESULT_TABLE_IDX, true);
     resultTable->setColumnHidden(ERROR_TYPE, true);
+    resultTable->setColumnHidden(ISSUE_ID, true);
     resultTable->setContextMenuPolicy(Qt::CustomContextMenu);
 	
     // setup signal to allow updating of V&V Action's icons
@@ -1652,6 +1690,7 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
         iconPath = ":/icons/passed.png";
         resultTable->setItem(resultTable->rowCount()-1, RESULT_CODE_COLUMN, new QTableWidgetItem(QIcon(iconPath), ""));
         resultTable->setItem(resultTable->rowCount()-1, TEST_NAME_COLUMN, new QTableWidgetItem(testName));
+        resultTable->setItem(resultTable->rowCount()-1, DESCRIPTION_COLUMN, new QTableWidgetItem("Passed"));
         resultTable->setItem(resultTable->rowCount()-1, RESULT_TABLE_IDX, new QTableWidgetItem(QString::number(resultTable->rowCount()-1)));
         resultTable->setItem(resultTable->rowCount()-1, ERROR_TYPE, new QTableWidgetItem(QString::number(4)));
     } 
@@ -1661,6 +1700,7 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
         iconPath = ":/icons/unparseable.png";
         resultTable->setItem(resultTable->rowCount()-1, RESULT_CODE_COLUMN, new QTableWidgetItem(QIcon(iconPath), ""));
         resultTable->setItem(resultTable->rowCount()-1, TEST_NAME_COLUMN, new QTableWidgetItem(testName));
+        resultTable->setItem(resultTable->rowCount()-1, DESCRIPTION_COLUMN, new QTableWidgetItem("Check Test Result Details for terminal output"));
         resultTable->setItem(resultTable->rowCount()-1, RESULT_TABLE_IDX, new QTableWidgetItem(QString::number(resultTable->rowCount()-1)));
         resultTable->setItem(resultTable->rowCount()-1, ERROR_TYPE, new QTableWidgetItem(QString::number(3)));
     }
@@ -1709,6 +1749,7 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
             resultTable->setItem(resultTable->rowCount()-1, OBJPATH_COLUMN, new QTableWidgetItem(objectName));
             resultTable->setItem(resultTable->rowCount()-1, RESULT_TABLE_IDX, new QTableWidgetItem(QString::number(resultTable->rowCount()-1)));
             resultTable->setItem(resultTable->rowCount()-1, ERROR_TYPE, new QTableWidgetItem(QString::number(error_type)));
+            resultTable->setItem(resultTable->rowCount()-1, ISSUE_ID, new QTableWidgetItem(objectIssueID));
 
             delete q3;
         }

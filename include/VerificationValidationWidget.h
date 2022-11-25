@@ -25,6 +25,7 @@
 #define OBJPATH_COLUMN 4
 #define RESULT_TABLE_IDX 5
 #define ERROR_TYPE 6
+#define ISSUE_ID 7
 
 #define NO_SELECTION -1
 #define OPEN 0
@@ -118,6 +119,7 @@ private slots:
     void showResult(const QString& testResultID);
     void performQueryRequest(const QString& query, const QStringList& args, QList<QList<QVariant>>* answer, const int& numAnswersExpected);
     void performQueryRequest(const QString& query, const QStringList& args, QString& lastInsertId);
+    void pathDisplayOptimize(int idx, int oldSize, int newSize);
 
 private:
     MainWindow *mainWindow;
