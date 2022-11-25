@@ -91,7 +91,7 @@ Result* Parser::search(const QString& cmd, const QString& terminalOutput, const 
 void Parser::searchSpecificTest(Result* r, const QString& currentLine, const Test* type) {
     if (currentLine.trimmed().isEmpty()) return;
     QString objectPath = currentLine;
-    QString objectName = currentLine.split('/').last();
+    QString objectName = currentLine.split('/').last().trimmed();
 
     if (type == &DefaultTests::NO_NESTED_REGIONS) {
         r->resultCode = Result::Code::FAILED;
@@ -270,7 +270,7 @@ Result* Parser::lc(const QString& cmd, const QString& terminalOutput, const QStr
 		QString issueDescription = "(ID,MAT,LOS,AIR,REGION,PARENT) = ("+ID+","+MAT+","+LOS+","+AIR+","+REGION+","+PARENT+")";
         QString objectPath = "COULD NOT OBTAIN FULL PATH";
         QString searchCMD = "search / -path /%1/\\*%2/%3";
-        const QString result = mgedRun(searchCMD.arg(object).arg(PARENT).arg(REGION), gFilePath);
+        const QString result = mgedRun(searchCMD.arg(object).arg(PARENT).arg(REGION), gFilePath).trimmed();
         if (!result.isEmpty()) objectPath = result;
         r->issues.push_back({objectPath, issueDescription});
 	}
