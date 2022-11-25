@@ -12,7 +12,7 @@ using Parser = VerificationValidation::Parser;
 
 VerificationValidationWidget::VerificationValidationWidget(MainWindow* mainWindow, Document* document, QWidget* parent) : 
 document(document), mainWindow(mainWindow), parentDockable(mainWindow->getVerificationValidationDockable()),
-terminal(new MgedWidget(document)), testList(new QListWidget()), resultTable(new QTableWidget()), selectTestsDialog(new QDialog()),
+terminal(NULL), testList(new QListWidget()), resultTable(new QTableWidget()), selectTestsDialog(new QDialog()),
 suiteList(new QListWidget()), test_sa(new QListWidget()), suite_sa(new QListWidget()),
 msgBoxRes(NO_SELECTION), dbConnectionName(""), runningTests(false), btnCollapseTerminal(new QPushButton()), mgedWorkerThread(nullptr)
 {
@@ -34,26 +34,7 @@ msgBoxRes(NO_SELECTION), dbConnectionName(""), runningTests(false), btnCollapseT
     
     btnCollapseTerminal->setIcon(QIcon(":/icons/terminal.png"));
     btnCollapseTerminal->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Expanding);
-    terminal->setVisible(false);
     setupUI();
-
-    connect(btnCollapseTerminal, &QPushButton::clicked, this, [this]() {
-        terminal->setVisible(!terminal->isVisible());
-        if(terminal->isVisible()){
-            resultTable->setColumnWidth(0, this->width() * 0.025);
-            resultTable->setColumnWidth(1, this->width() * 0.075);
-            resultTable->setColumnWidth(2, this->width() * 0.225);
-            resultTable->setColumnWidth(3, this->width() * 0.10);
-            resultTable->setColumnWidth(4, this->width() * 0.075);
-        } else {
-            resultTable->setColumnWidth(0, this->width() * 0.025);
-            resultTable->setColumnWidth(1, this->width() * 0.175);
-            resultTable->setColumnWidth(2, this->width() * 0.375);
-            resultTable->setColumnWidth(3, this->width() * 0.35);
-            resultTable->setColumnWidth(4, this->width() * 0.075);
-        }
-    });
-
     updateDockableHeader();
     
     validateChecksum();
@@ -1215,17 +1196,15 @@ void VerificationValidationWidget::setupUI() {
 
     // setup terminal
     addWidget(btnCollapseTerminal);
-    addWidget(terminal);
 
     connect(btnCollapseTerminal, &QPushButton::clicked, this, [this]() {
         if (!terminal) {
             terminal = new MgedWidget(document);
-
             terminal->setStyleSheet("QTextEdit { background-color: black; color: #39ff14; font-weight: 600}");
-            
             terminal->setVisible(false);
             this->addWidget(terminal);
         }
+
         terminal->setVisible(!terminal->isVisible());
         if(terminal->isVisible()){
             resultTable->setColumnWidth(RESULT_CODE_COLUMN, this->width() * 0.025);
