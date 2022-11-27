@@ -21,11 +21,11 @@
 #define RESULT_CODE_COLUMN 0
 #define TEST_NAME_COLUMN 1
 #define DESCRIPTION_COLUMN 2
-#define OBJPATH_COLUMN 3
-#define OBJECT_COLUMN 4
-#define TEST_RESULT_ID_COLUMN 5
-#define RESULT_TABLE_IDX 6
-#define ERROR_TYPE 7
+#define OBJECT_COLUMN 3
+#define OBJPATH_COLUMN 4
+#define RESULT_TABLE_IDX 5
+#define ERROR_TYPE 6
+#define ISSUE_ID 7
 
 #define NO_SELECTION -1
 #define OPEN 0
@@ -87,6 +87,7 @@ public:
     void showRemoveTestDialog();
     void showNewTestSuiteDialog();
     void showRemoveTestSuiteDialog();
+    void exportToCSV();
 
 signals:
     void queryFinished(const QList<QList<QVariant>>& answer);
@@ -112,12 +113,14 @@ private slots:
     void removeSuites();
     void addArgForm();
     void rmvArgForm();
+    void isArgTyped(const QString& text);
     void isVarClicked(int state);
     void resultTableChangeSize();
     void showResult(const QString& testResultID);
     void performQueryRequest(const QString& query, const QStringList& args, QList<QList<QVariant>>* answer, const int& numAnswersExpected);
     void performQueryRequest(const QString& query, const QStringList& args, QString& lastInsertId);
     void testStartAndThreadSetUp();
+    void pathDisplayOptimize(int idx, int oldSize, int newSize);
 
 private:
     MainWindow *mainWindow;
@@ -146,6 +149,7 @@ private:
     QWidget* content_widget;
     std::vector<QGroupBox*> argForms;
     QProgressBar* vvProgressBar;
+    QPushButton* btnCollapseTerminal;
 
     MgedWidget* terminal;
     MgedWorker* mgedWorkerThread;
@@ -167,7 +171,6 @@ private:
     bool minBtn_toggle;
     QToolButton* minBtn;
     int resultTableSortIdx;
-    std::vector<int> nonResultItemList;
     
     std::map<QListWidgetItem*, std::pair<int, VerificationValidation::Test>> itemToTestMap;
     std::map<int, QListWidgetItem*> idToItemMap;
@@ -213,6 +216,8 @@ private:
     QList<QListWidgetItem*> getSelectedTests();
     void validateChecksum();
     void addItemFromTest(QListWidget* &listWidget);
+
+    void resizeEvent(QResizeEvent *event) override;
 };
 
 #endif // VVWIDGET_H
