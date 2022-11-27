@@ -244,6 +244,10 @@ void VerificationValidationWidget::dbInitTables() {
         delete dbExec("CREATE TABLE TestsInSuite (id INTEGER PRIMARY KEY, testSuiteID INTEGER NOT NULL, testID INTEGER NOT NULL)");
     if (!getDatabase().tables().contains("TestArg"))
         delete dbExec("CREATE TABLE TestArg (id INTEGER PRIMARY KEY, testID INTEGER NOT NULL, argIdx INTEGER NOT NULL, arg TEXT NOT NULL, argType INTEGER NOT NULL, defaultVal TEXT)");
+    if (!getDatabase().tables().contains("RunningTests"))
+        delete dbExec("CREATE TABLE RunningTests (id INTEGER PRIMARY KEY, testID TEXT NOT NULL, hasFinished TEXT NOT NULL)");
+    if (!getDatabase().tables().contains("ObjectTree"))
+        delete dbExec("CREATE TABLE ObjectTree (id INTEGER PRIMARY KEY, object TEXT NOT NULL)");
 }
 
 void VerificationValidationWidget::dbPopulateDefaults() {
@@ -1257,15 +1261,14 @@ void VerificationValidationWidget::setupUI() {
         }
     });
 
-    QSqlDatabase db = getDatabase();
-    QSqlQuery query(db);
+    QSqlQuery* query = new QSqlQuery(getDatabase());
     addItemFromTest(testList);
 
     // Get suite list from db
-    query.exec("Select suiteName from TestSuites ORDER by id ASC");
+    query->exec("Select suiteName from TestSuites ORDER by id ASC");
     QStringList testSuites;
-    while(query.next()){
-    	testSuites << query.value(0).toString();
+    while(query->next()){
+    	testSuites << query->value(0).toString();
     }
     // Insert suite list into suites checklist widget
     suiteList->addItems(testSuites);
@@ -1339,6 +1342,43 @@ void VerificationValidationWidget::setupUI() {
     resultTable->setColumnHidden(ERROR_TYPE, true);
     resultTable->setColumnHidden(ISSUE_ID, true);
     resultTable->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    // *******************
+
+    QSqlQuery* query2 = new QSqlQuery(getDatabase());
+
+    QString str = "0";
+    query->prepare("SELECT testID FROM RunningTests WHERE hasFinished = ?");
+    query->addBindValue(str);
+    query->exec();
+
+    if (query->next()) {
+
+        QMessageBox msgBox;
+        msgBox.setText("This file was previously closed while running tests. Would you like to continue them?");
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::Yes);
+
+        if (msgBox.exec() == QMessageBox::Yes) {
+            hasUnfinishedTests = true;
+            
+            do {
+                query2->prepare("SELECT testName FROM Tests WHERE id = ?");
+                query2->addBindValue(query->value(0));
+                query2->exec();
+
+                if  (query2->next()) {
+                    QList<QListWidgetItem *> item = testList->findItems(query2->value(0).toString(), Qt::MatchExactly);
+                    item.at(0)->setCheckState(Qt::Checked);
+                }
+
+            } while (query->next());
+
+            testStartAndThreadSetUp();
+        }
+    }
+
+    //************
 	
     // setup signal to allow updating of V&V Action's icons
     connect(this, &VerificationValidationWidget::updateVerifyValidateAct, mainWindow, &MainWindow::updateVerifyValidateAct);
@@ -1355,72 +1395,110 @@ void VerificationValidationWidget::setupUI() {
     connect(testList, SIGNAL(itemDoubleClicked(QListWidgetItem *)), this, SLOT(userInputDialogUI(QListWidgetItem *)));
     // Run test & exit
     connect(buttonOptions, &QDialogButtonBox::accepted, selectTestsDialog, &QDialog::accept);
-    connect(buttonOptions, &QDialogButtonBox::accepted, this, [this]() {
-        // preprocess stuff everytime running tests
-        validateChecksum();
-        dbUpdateModelUUID();
+    connect(buttonOptions, SIGNAL(accepted()), this, SLOT(testStartAndThreadSetUp()));
+    connect(buttonOptions, &QDialogButtonBox::rejected, selectTestsDialog, &QDialog::reject);
+    // Open details dialog
+    connect(resultTable, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(setupResultMenu(const QPoint&)));
+}
+
+void VerificationValidationWidget::testStartAndThreadSetUp() {
+    QSqlQuery* query = new QSqlQuery(getDatabase());
+    QSqlQuery* query2 = new QSqlQuery(getDatabase());
+
+    // preprocess stuff everytime running tests
+    validateChecksum();
+    dbUpdateModelUUID();
+    minBtn_toggle = true;
+
+    // get tests + do checks + UI changes
+    QList<QListWidgetItem *> selected_tests = getSelectedTests();
+    int totalTests = selected_tests.count();
+    if (!totalTests)
+    {
+        popup("No tests were selected.");
+        return;
+    }
+    resultTableChangeSize();
+
+    // Do conditional logic for if the program was closed while running tests
+    QStringList selectedObjects;
+    if (hasUnfinishedTests == false) {
         dbClearResults();
         resultTable->setRowCount(0);
-        minBtn_toggle = true;
+        selectedObjects = document->getObjectTreeWidget()->getSelectedObjects(ObjectTreeWidget::Name::PATHNAME, ObjectTreeWidget::Level::ALL);
 
-        // get tests + do checks + UI changes
-        QList<QListWidgetItem*> selected_tests = getSelectedTests();
-        int totalTests = selected_tests.count();
-        if (!totalTests) {
-            popup("No tests were selected.");
-            return;
+        // POPULATE SELECTED OBJECTS TABLE
+        for (QString object : selectedObjects) {
+            query->prepare("INSERT INTO ObjectTree (object) VALUES (?)");
+            query->addBindValue(object);
+            query->exec();
         }
-        resultTableChangeSize();
-        dbClearResults();
-        resultTable->setRowCount(0);
 
-        QStringList selectedObjects = document->getObjectTreeWidget()->getSelectedObjects(ObjectTreeWidget::Name::PATHNAME, ObjectTreeWidget::Level::ALL);
+        // POPULATE RUNNING TEST TABLE 
+        for (QListWidgetItem* item : selected_tests) {
+            query->prepare("SELECT id FROM Tests WHERE testName = ?");
+            query->addBindValue(item->text());
+            query->exec();
 
-        // spin up new thread and get to work
-        mgedWorkerThread = new MgedWorker(selected_tests, selectedObjects, totalTests, itemToTestMap, modelID, *(document->getFilePath()));
+            int str = 0;
+            query->first();
+            query2->prepare("INSERT INTO RunningTests (testID, hasFinished) VALUES (?, ?)");
+            query2->addBindValue(query->value(0));
+            query2->addBindValue(str);
+            query2->exec();
+        }
+    }
+    else {
+        // POPULATE selectedObjects
+        query->prepare("SELECT object FROM ObjectTree");
+        query->exec();
 
-        // signal that allows for updating of MainWindow's status bar
-        connect(mgedWorkerThread, qOverload<bool, int, int, int, int>(&MgedWorker::updateStatusBarRequest),
+        while (query->next())
+            selectedObjects.push_back(query->value(0).toString());
+    }
+
+    // spin up new thread and get to work
+    mgedWorkerThread = new MgedWorker(selected_tests, selectedObjects, totalTests, itemToTestMap, modelID, *(document->getFilePath()));
+
+    // signal that allows for updating of MainWindow's status bar
+    connect(mgedWorkerThread, qOverload<bool, int, int, int, int>(&MgedWorker::updateStatusBarRequest),
             mainWindow, qOverload<bool, int, int, int, int>(&MainWindow::setStatusBarMessage));
 
-        // signal that allows for updating of progress bar from thread
-        connect(mgedWorkerThread, &MgedWorker::updateProgressBarRequest, this, [this](const int& currTest, const int& totalTests) {
+    // signal that allows for updating of progress bar from thread
+    connect(mgedWorkerThread, &MgedWorker::updateProgressBarRequest, this, [this](const int &currTest, const int &totalTests)
+            {
             if (!vvProgressBar) return;
             if (currTest < 0 || totalTests <= 0) vvProgressBar->setVisible(false);
             else vvProgressBar->setVisible(true);
             int newVal = (totalTests) ? ceil(currTest * 100 / (float)totalTests) : 0;
-            vvProgressBar->setValue(newVal);
-        });
+            vvProgressBar->setValue(newVal); });
 
-        // signal that allows Verification Validation Widget's result table to be updated via thread
-        connect(mgedWorkerThread, &MgedWorker::showResultRequest, this, &VerificationValidationWidget::showResult, Qt::BlockingQueuedConnection);
+    // signal that allows Verification Validation Widget's result table to be updated via thread
+    connect(mgedWorkerThread, &MgedWorker::showResultRequest, this, &VerificationValidationWidget::showResult, Qt::BlockingQueuedConnection);
 
-        // signals that allows V&V Widget's database to be updated from thread
-        // note: must be blocking
-        connect(mgedWorkerThread, qOverload<const QString&, const QStringList&, QList<QList<QVariant>>*, const int&>(&MgedWorker::queryRequest),
-                this, qOverload<const QString&, const QStringList&, QList<QList<QVariant>>*, const int&>(&VerificationValidationWidget::performQueryRequest),
-                Qt::BlockingQueuedConnection);
-        
-        connect(mgedWorkerThread, qOverload<const QString&, const QStringList&, QString&>(&MgedWorker::queryRequest),
-                this, qOverload<const QString&, const QStringList&, QString&>(&VerificationValidationWidget::performQueryRequest),
-                Qt::BlockingQueuedConnection);
-        
-        // thread finish -> cleanup
-        connect(mgedWorkerThread, &MgedWorker::finished, this, [this]() {
+    // signals that allows V&V Widget's database to be updated from thread
+    // note: must be blocking
+    connect(mgedWorkerThread, qOverload<const QString &, const QStringList &, QList<QList<QVariant>> *, const int &>(&MgedWorker::queryRequest),
+            this, qOverload<const QString &, const QStringList &, QList<QList<QVariant>> *, const int &>(&VerificationValidationWidget::performQueryRequest),
+            Qt::BlockingQueuedConnection);
+
+    connect(mgedWorkerThread, qOverload<const QString &, const QStringList &, QString &>(&MgedWorker::queryRequest),
+            this, qOverload<const QString &, const QStringList &, QString &>(&VerificationValidationWidget::performQueryRequest),
+            Qt::BlockingQueuedConnection);
+
+    // thread finish -> cleanup
+    connect(mgedWorkerThread, &MgedWorker::finished, this, [this]()
+            {
             this->runningTests = false;
             emit updateVerifyValidateAct(this->document);
 
             mgedWorkerThread->deleteLater();
-            mgedWorkerThread = nullptr;
-        });
+            mgedWorkerThread = nullptr; });
 
-        this->runningTests = true;
-        emit updateVerifyValidateAct(this->document);
-        mgedWorkerThread->start();
-    });
-    connect(buttonOptions, &QDialogButtonBox::rejected, selectTestsDialog, &QDialog::reject);
-    // Open details dialog
-    connect(resultTable, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(setupResultMenu(const QPoint&)));
+    this->runningTests = true;
+    emit updateVerifyValidateAct(this->document);
+    mgedWorkerThread->start();
+    hasUnfinishedTests = false;
 }
 
 QSqlQuery* VerificationValidationWidget::dbExec(QString command, bool showErrorPopup) {
@@ -1441,6 +1519,8 @@ void VerificationValidationWidget::dbClearResults() {
     delete dbExec("DELETE FROM TestResults");
     delete dbExec("DELETE FROM Issues");
     delete dbExec("DELETE FROM ObjectIssue");
+    delete dbExec("DELETE FROM RunningTests");
+    delete dbExec("DELETE FROM ObjectTree");
 }
 
 void VerificationValidationWidget::copyToClipboard(QTableWidgetItem* item) {
@@ -1748,7 +1828,7 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
             else if (resultCode == VerificationValidation::Result::Code::WARNING){
                 iconPath = ":/icons/warning.png";
                 error_type = 2;
-            }        
+            }
 
             QStringList objectTree = objectName.split("/");
 
@@ -2001,6 +2081,11 @@ void MgedWorker::run() {
             emit updateStatusBarRequest(true, i + 1, totalTests, objIdx + 1, selectedObjects.size());
             emit updateProgressBarRequest((totalTests * objIdx) + i + 1, totalTests * selectedObjects.size());
             emit showResultRequest(testResultID);
+
+            // update running list with finished test
+            QString str = "1";
+            emit queryRequest("UPDATE RunningTests SET hasFinished = ? WHERE testID = ?", 
+                { str, QString::number(testID) });
         }
     }
 
