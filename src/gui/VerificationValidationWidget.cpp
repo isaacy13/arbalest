@@ -1363,7 +1363,6 @@ void VerificationValidationWidget::setupUI() {
 
         if (msgBox.exec() == QMessageBox::Yes) {
             hasUnfinishedTests = true;
-            
             do {
                 query2->prepare("SELECT testName FROM Tests WHERE id = ?");
                 query2->addBindValue(query->value(0));
@@ -1951,6 +1950,7 @@ void VerificationValidationWidget::updateDockableHeader() {
         vvProgressBar->setOrientation(Qt::Horizontal);
         vvProgressBar->setRange(0, 100);
         vvProgressBar->setVisible(false);
+        vvProgressBar->setStyleSheet("QProgressBar::chunk {background: #00CA00;}");
 
         QVBoxWidget* titleWidget = new QVBoxWidget;
         titleWidget->addWidget(topRow);
