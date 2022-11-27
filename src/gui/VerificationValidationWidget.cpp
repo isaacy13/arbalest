@@ -1356,10 +1356,10 @@ void VerificationValidationWidget::setupUI() {
 
         QMessageBox msgBox;
         msgBox.setText("This file was previously closed while running tests. Would you like to continue them?");
-        msgBox.setStandardButtons(QMessageBox::Open | QMessageBox::Cancel);
-        msgBox.setDefaultButton(QMessageBox::Open);
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::Yes);
 
-        if (msgBox.exec() == QMessageBox::Open) {
+        if (msgBox.exec() == QMessageBox::Yes) {
             hasUnfinishedTests = true;
             
             do {
