@@ -1445,8 +1445,19 @@ void VerificationValidationWidget::dbClearResults() {
 
 void VerificationValidationWidget::copyToClipboard(QTableWidgetItem* item) {
     clipboard = QApplication::clipboard();
-    QTableWidgetItem *objPathItem = resultTable->item(item->row(), OBJPATH_COLUMN);
-    QString objPath = (objPathItem) ? objPathItem->text() : "";
+    QTableWidgetItem *objPathItem = resultTable->item(item->row(), ISSUE_ID);
+    QString objPath = "";
+    if(objPathItem){
+        QSqlQuery* q = new QSqlQuery(getDatabase());
+        
+        q->prepare("SELECT objectName FROM ObjectIssue WHERE id = ?");
+        q->addBindValue(objPathItem->text());
+        dbExec(q);
+        while(q->next()){
+            objPath = q->value(0).toString();
+        }
+    }
+
     clipboard->setText(objPath);
 }
 
