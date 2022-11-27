@@ -21,11 +21,11 @@
 #define RESULT_CODE_COLUMN 0
 #define TEST_NAME_COLUMN 1
 #define DESCRIPTION_COLUMN 2
-#define OBJPATH_COLUMN 3
-#define OBJECT_COLUMN 4
-#define TEST_RESULT_ID_COLUMN 5
-#define RESULT_TABLE_IDX 6
-#define ERROR_TYPE 7
+#define OBJECT_COLUMN 3
+#define OBJPATH_COLUMN 4
+#define RESULT_TABLE_IDX 5
+#define ERROR_TYPE 6
+#define ISSUE_ID 7
 
 #define NO_SELECTION -1
 #define OPEN 0
@@ -122,12 +122,15 @@ private slots:
     void showResult(const QString& testResultID);
     void performQueryRequest(const QString& query, const QStringList& args, QList<QList<QVariant>>* answer, const int& numAnswersExpected);
     void performQueryRequest(const QString& query, const QStringList& args, QString& lastInsertId);
+    void testStartAndThreadSetUp();
+    void pathDisplayOptimize(int idx, int oldSize, int newSize);
 
 private:
     MainWindow *mainWindow;
     Dockable *parentDockable;
     int msgBoxRes;
     QString cacheFolder;
+    bool hasUnfinishedTests = false;
 
     // widget-specific data
     Document *document;
