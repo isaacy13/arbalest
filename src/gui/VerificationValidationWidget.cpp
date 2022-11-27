@@ -1180,7 +1180,7 @@ void VerificationValidationWidget::setupUI() {
     if (query->next()) {
 
         QMessageBox msgBox;
-        msgBox.setText("This file was previously closed while running tests would you like to continue them.");
+        msgBox.setText("This file was previously closed while running tests. Would you like to continue them?");
         msgBox.setStandardButtons(QMessageBox::Open | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Open);
 
@@ -1664,11 +1664,7 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
             else if (resultCode == VerificationValidation::Result::Code::WARNING){
                 iconPath = ":/icons/warning.png";
                 error_type = 2;
-            }        
-
-            // setting the elide mode decides were ... is placed in table cells (left middle right or none)
-            // unfortunatly its bugged an doesn't work
-            //resultTable->setTextElideMode(Qt::ElideLeft);
+            }
 
             // Change to hide icon image path from showing
             resultTable->setItem(resultTable->rowCount()-1, RESULT_CODE_COLUMN, new QTableWidgetItem(QIcon(iconPath), ""));
