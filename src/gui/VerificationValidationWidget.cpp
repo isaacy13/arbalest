@@ -1170,7 +1170,7 @@ void VerificationValidationWidget::pathDisplayOptimize(int idx, int oldSize, int
     for(int i = 0; i < resultTable->rowCount(); i++){
         if(resultTable->item(i, idx)){
             q->prepare("SELECT objectName FROM ObjectIssue WHERE id = ?");
-            q->addBindValue(resultTable->item(i, ISSUE_ID)->text());
+            q->addBindValue(resultTable->item(i, ISSUE_ID_COLUMN)->text());
             dbExec(q);
             QString path;
             while(q->next()){
@@ -1203,7 +1203,7 @@ void VerificationValidationWidget::setupUI() {
     // setup result table's column headers
     QStringList columnLabels;
     columnLabels << "Type" << "Test Name" << "Description" << "Issue Object" << "Full Path";
-    resultTable->setColumnCount(columnLabels.size() + 3); // add hidden columns for testResultID + object
+    resultTable->setColumnCount(columnLabels.size() + 5); // add hidden columns
     resultTable->setHorizontalHeaderLabels(columnLabels);
     resultTable->verticalHeader()->setVisible(false);
     resultTable->horizontalHeader()->setStretchLastSection(true);
@@ -1211,19 +1211,19 @@ void VerificationValidationWidget::setupUI() {
     
     QHeaderView* header = resultTable->horizontalHeader();
     
-    resultTableSortIdx = RESULT_TABLE_IDX;
+    resultTableSortIdx = RESULT_TABLE_IDX_COLUMN;
     connect(header, &QHeaderView::sectionClicked, [this](int idx){
         if(idx == resultTableSortIdx){
             resultTable->horizontalHeaderItem(idx)->setForeground(QBrush(QColor("#4b4b4b")));
-            resultTable->sortItems(RESULT_TABLE_IDX, Qt::AscendingOrder);
-            resultTableSortIdx = RESULT_TABLE_IDX;
+            resultTable->sortItems(RESULT_TABLE_IDX_COLUMN, Qt::AscendingOrder);
+            resultTableSortIdx = RESULT_TABLE_IDX_COLUMN;
         } else {
-            if(resultTableSortIdx != RESULT_TABLE_IDX){
+            if(resultTableSortIdx != RESULT_TABLE_IDX_COLUMN){
                 resultTable->horizontalHeaderItem(resultTableSortIdx)->setForeground(QBrush(QColor("#4b4b4b")));
             }
             resultTable->horizontalHeaderItem(idx)->setForeground(QBrush(Qt::blue));
             if(idx == 0)
-                resultTable->sortItems(ERROR_TYPE, Qt::AscendingOrder);
+                resultTable->sortItems(ERROR_TYPE_COLUMN, Qt::AscendingOrder);
             else
                 resultTable->sortItems(idx, Qt::AscendingOrder);
             resultTableSortIdx = idx;
@@ -1338,9 +1338,11 @@ void VerificationValidationWidget::setupUI() {
 
     resultTable->setShowGrid(false);
     resultTable->setStyleSheet("QTableWidget::item {border-bottom: 0.5px solid #3C3C3C;}");
-    resultTable->setColumnHidden(RESULT_TABLE_IDX, true);
-    resultTable->setColumnHidden(ERROR_TYPE, true);
-    resultTable->setColumnHidden(ISSUE_ID, true);
+    resultTable->setColumnHidden(RESULT_TABLE_IDX_COLUMN, true);
+    resultTable->setColumnHidden(ERROR_TYPE_COLUMN, true);
+    resultTable->setColumnHidden(ISSUE_ID_COLUMN, true);
+    resultTable->setColumnHidden(TEST_RESULT_ID_COLUMN, true);
+    resultTable->setColumnHidden(OBJECT_TESTED_COLUMN, true);
     resultTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
     // *******************
@@ -1525,7 +1527,7 @@ void VerificationValidationWidget::dbClearResults() {
 
 void VerificationValidationWidget::copyToClipboard(QTableWidgetItem* item) {
     clipboard = QApplication::clipboard();
-    QTableWidgetItem *objPathItem = resultTable->item(item->row(), ISSUE_ID);
+    QTableWidgetItem *objPathItem = resultTable->item(item->row(), ISSUE_ID_COLUMN);
     QString objPath = "";
     if(objPathItem){
         QSqlQuery* q = new QSqlQuery(getDatabase());
@@ -1576,6 +1578,8 @@ void VerificationValidationWidget::setupDetailedResult(QTableWidgetItem* item) {
     QTableWidgetItem* testNameItem = resultTable->item(item->row(), TEST_NAME_COLUMN);
     QTableWidgetItem* descriptionItem = resultTable->item(item->row(), DESCRIPTION_COLUMN);
     QTableWidgetItem* objPathItem = resultTable->item(item->row(), OBJPATH_COLUMN);
+    QTableWidgetItem* testResultItem = resultTable->item(item->row(), TEST_RESULT_ID_COLUMN);
+    QTableWidgetItem* objectTestedItem = resultTable->item(item->row(), OBJECT_TESTED_COLUMN);
 
     QString testName = (testNameItem) ? testNameItem->text() : "";
     QString description = (descriptionItem) ? descriptionItem->text() : "";
@@ -1587,37 +1591,24 @@ void VerificationValidationWidget::setupDetailedResult(QTableWidgetItem* item) {
     if (!q->next()) { return; }
     int testID = q->value(0).toInt();
     Test currentTest = itemToTestMap.at(idToItemMap.at(testID)).second;
-    QString object = resultTable->item(item->row(), OBJECT_COLUMN)->text();
-    QString testCommand = currentTest.getCMD(object);
+    
+    
+    QString objectTested = (objectTestedItem) ? objectTestedItem->text() : "";
+    QString testCommand = currentTest.getCMD(objectTested);
 
-    QString objectPlaceholder = object;
-    for (Arg& a : currentTest.ArgList) {
-        if (a.type == Arg::Type::ObjectName) {
-            objectPlaceholder = objectPlaceholder.split("/").last();
-            break;
-        }
-        else if (a.type == Arg::Type::ObjectNone) {
-            objectPlaceholder = "";
-            break;
-        }
-    }
+    QString testResultID = (testResultItem) ? testResultItem->text() : "";
 
-    QSqlQuery* q2 = new QSqlQuery(getDatabase());
-    q2->prepare("SELECT TestResults.terminalOutput, TestResults.resultCode FROM TestResults INNER JOIN TestArg ON TestResults.objectArgID = TestArg.id WHERE TestResults.testID = ? AND (TestArg.argType = ? OR TestArg.argType = ? OR TestArg.argType = ?) AND TestArg.arg = ?");
-    q2->addBindValue(testID);
-    q2->addBindValue(Arg::Type::ObjectName);
-    q2->addBindValue(Arg::Type::ObjectNone);
-    q2->addBindValue(Arg::Type::ObjectPath);    
-    q2->addBindValue(objectPlaceholder);
+    q->prepare("SELECT terminalOutput, resultCode FROM TestResults WHERE id = ?");
+    q->addBindValue(testResultID);
 
-    dbExec(q2);
-    if (!q2->next()) {
-        popup("Failed to show testID: " + testID);
+    dbExec(q);
+    if (!q->next()) {
+        popup("Failed to show testResultID: " + testResultID);
         return;
     }
 
-    QString terminalOutput = q2->value(0).toString();
-    int code = q2->value(1).toInt();
+    QString terminalOutput = q->value(0).toString();
+    int code = q->value(1).toInt();
     if(code == Result::Code::PASSED)
         resultCode = "Passed";
     else if(code == Result::Code::WARNING)
@@ -1759,7 +1750,7 @@ void VerificationValidationWidget::visualizeObjects(QList<QTableWidgetItem*> ite
 
 void VerificationValidationWidget::showResult(const QString& testResultID) {
     QSqlQuery* q = new QSqlQuery(getDatabase());
-    q->prepare("SELECT Tests.testName, TestResults.resultCode, TestResults.terminalOutput FROM Tests INNER JOIN TestResults ON Tests.id=TestResults.testID WHERE TestResults.id = ?");
+    q->prepare("SELECT Tests.testName, TestResults.resultCode, TestResults.terminalOutput, TestResults.objectArgID FROM Tests INNER JOIN TestResults ON Tests.id=TestResults.testID WHERE TestResults.id = ?");
     q->addBindValue(testResultID);
     dbExec(q);
 
@@ -1771,6 +1762,15 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
     QString testName = q->value(0).toString();
     int resultCode = q->value(1).toInt();
     QString terminalOutput = q->value(2).toString();
+    int objectArgID = q->value(3).toInt();
+    QString testedObject = "";
+
+    q->prepare("SELECT arg FROM TestArg WHERE id = ?");
+    q->addBindValue(objectArgID);
+    dbExec(q);
+
+    if (!q->next()) popup("Failed get testedObject -- using default");
+    else testedObject = q->value(0).toString();
 
     QString iconPath = "";
     QString objectName;
@@ -1782,8 +1782,10 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
         resultTable->setItem(resultTable->rowCount()-1, RESULT_CODE_COLUMN, new QTableWidgetItem(QIcon(iconPath), ""));
         resultTable->setItem(resultTable->rowCount()-1, TEST_NAME_COLUMN, new QTableWidgetItem(testName));
         resultTable->setItem(resultTable->rowCount()-1, DESCRIPTION_COLUMN, new QTableWidgetItem("Passed"));
-        resultTable->setItem(resultTable->rowCount()-1, RESULT_TABLE_IDX, new QTableWidgetItem(QString::number(resultTable->rowCount()-1)));
-        resultTable->setItem(resultTable->rowCount()-1, ERROR_TYPE, new QTableWidgetItem(QString::number(4)));
+        resultTable->setItem(resultTable->rowCount()-1, RESULT_TABLE_IDX_COLUMN, new QTableWidgetItem(QString::number(resultTable->rowCount()-1)));
+        resultTable->setItem(resultTable->rowCount()-1, ERROR_TYPE_COLUMN, new QTableWidgetItem(QString::number(4)));
+        resultTable->setItem(resultTable->rowCount()-1, TEST_RESULT_ID_COLUMN, new QTableWidgetItem(testResultID));
+        resultTable->setItem(resultTable->rowCount()-1, OBJECT_TESTED_COLUMN, new QTableWidgetItem(testedObject));
     } 
 
     else if (resultCode == Result::Code::UNPARSEABLE) {
@@ -1792,8 +1794,10 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
         resultTable->setItem(resultTable->rowCount()-1, RESULT_CODE_COLUMN, new QTableWidgetItem(QIcon(iconPath), ""));
         resultTable->setItem(resultTable->rowCount()-1, TEST_NAME_COLUMN, new QTableWidgetItem(testName));
         resultTable->setItem(resultTable->rowCount()-1, DESCRIPTION_COLUMN, new QTableWidgetItem("Check Test Result Details for terminal output"));
-        resultTable->setItem(resultTable->rowCount()-1, RESULT_TABLE_IDX, new QTableWidgetItem(QString::number(resultTable->rowCount()-1)));
-        resultTable->setItem(resultTable->rowCount()-1, ERROR_TYPE, new QTableWidgetItem(QString::number(3)));
+        resultTable->setItem(resultTable->rowCount()-1, RESULT_TABLE_IDX_COLUMN, new QTableWidgetItem(QString::number(resultTable->rowCount()-1)));
+        resultTable->setItem(resultTable->rowCount()-1, ERROR_TYPE_COLUMN, new QTableWidgetItem(QString::number(3)));
+        resultTable->setItem(resultTable->rowCount()-1, TEST_RESULT_ID_COLUMN, new QTableWidgetItem(testResultID));
+        resultTable->setItem(resultTable->rowCount()-1, OBJECT_TESTED_COLUMN, new QTableWidgetItem(testedObject));
     }
 
     else {
@@ -1838,9 +1842,11 @@ void VerificationValidationWidget::showResult(const QString& testResultID) {
             resultTable->setItem(resultTable->rowCount()-1, DESCRIPTION_COLUMN, new QTableWidgetItem(issueDescription));
             resultTable->setItem(resultTable->rowCount()-1, OBJECT_COLUMN, new QTableWidgetItem(objectTree.at(objectTree.size()-1)));
             resultTable->setItem(resultTable->rowCount()-1, OBJPATH_COLUMN, new QTableWidgetItem(objectName));
-            resultTable->setItem(resultTable->rowCount()-1, RESULT_TABLE_IDX, new QTableWidgetItem(QString::number(resultTable->rowCount()-1)));
-            resultTable->setItem(resultTable->rowCount()-1, ERROR_TYPE, new QTableWidgetItem(QString::number(error_type)));
-            resultTable->setItem(resultTable->rowCount()-1, ISSUE_ID, new QTableWidgetItem(objectIssueID));
+            resultTable->setItem(resultTable->rowCount()-1, RESULT_TABLE_IDX_COLUMN, new QTableWidgetItem(QString::number(resultTable->rowCount()-1)));
+            resultTable->setItem(resultTable->rowCount()-1, ERROR_TYPE_COLUMN, new QTableWidgetItem(QString::number(error_type)));
+            resultTable->setItem(resultTable->rowCount()-1, ISSUE_ID_COLUMN, new QTableWidgetItem(objectIssueID));
+            resultTable->setItem(resultTable->rowCount()-1, TEST_RESULT_ID_COLUMN, new QTableWidgetItem(testResultID));
+            resultTable->setItem(resultTable->rowCount()-1, OBJECT_TESTED_COLUMN, new QTableWidgetItem(testedObject));
 
             delete q3;
         }
