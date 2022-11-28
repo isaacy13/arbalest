@@ -112,6 +112,7 @@ private slots:
     void searchTests_TS(const QString &input);
     void searchTests_SA();
     void userInputDialogUI(QListWidgetItem*);
+    void userInputDialogUIDC(QListWidgetItem*);
     void createTest();
     void removeTests();
     void createSuite();

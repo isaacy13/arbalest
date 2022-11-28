@@ -1088,64 +1088,76 @@ void VerificationValidationWidget::showRemoveTestSuiteDialog() {
 }
 
 void VerificationValidationWidget::userInputDialogUI(QListWidgetItem* test) {
-    if(test->toolTip() !=  "Category"){
-        if(itemToTestMap.at(test).second.hasVarArgs()) {
-            QDialog* userInputDialog = new QDialog();
-            userInputDialog->setModal(true);
-            userInputDialog->setWindowTitle("Custom Argument Value");
+    if(test->toolTip() ==  "Category")
+        return;
+    if(!itemToTestMap.at(test).second.hasVarArgs())
+        return;
+    if(!test->checkState())
+        return;
+    
+    userInputDialogUIDC(test);
+}
 
-            QVBoxLayout* vLayout = new QVBoxLayout();
-            QFormLayout* formLayout = new QFormLayout();
+void VerificationValidationWidget::userInputDialogUIDC(QListWidgetItem* test) {
+    if(test->toolTip() ==  "Category")
+        return;
+    if(!itemToTestMap.at(test).second.hasVarArgs())
+        return;
 
-            QString testName = itemToTestMap.at(test).second.testName;
-            vLayout->addWidget(new QLabel("Test Name: "+ testName));
-            vLayout->addSpacing(5);
-            vLayout->addWidget(new QLabel("Test Command: "+ itemToTestMap.at(test).second.getCMD()));
-            vLayout->addSpacing(15);
+    QDialog* userInputDialog = new QDialog();
+    userInputDialog->setModal(true);
+    userInputDialog->setWindowTitle("Custom Argument Value");
 
-            std::vector<std::tuple<Arg*, QLineEdit*, QString>> inputTuples;
-            std::vector<Arg>* argList = &(itemToTestMap.at(test).second.ArgList);
-            for(int i = 0; i < argList->size(); i++){
-                if(argList->at(i).type == Arg::Type::Dynamic){
-                    QLineEdit* lineEdit = new QLineEdit(argList->at(i).defaultValue);
-                    if(testName == DefaultTests::NO_OVERLAPS.testName || testName == DefaultTests::NO_NULL_REGIONS.testName)
-                        inputTuples.push_back(std::make_tuple(&argList->at(i), lineEdit, DefaultTests::nameToTestMap.at(testName).ArgList.at(i).defaultValue));
-                    else
-                        inputTuples.push_back(std::make_tuple(&argList->at(i), lineEdit, ""));
-                    formLayout->addRow(argList->at(i).argument, lineEdit);
-                    formLayout->setSpacing(10);
-                }
-            }
-            
-            vLayout->addLayout(formLayout);
-            QPushButton* setBtn = new QPushButton("Set");
-            vLayout->addWidget(setBtn);
-            userInputDialog->setLayout(vLayout);
+    QVBoxLayout* vLayout = new QVBoxLayout();
+    QFormLayout* formLayout = new QFormLayout();
 
-            connect(setBtn, &QPushButton::clicked, [this, test, inputTuples, testName](){
-                bool isDefault = true;
-                for(const auto& [currentArg, currentLineEdit, defaultVal] : inputTuples){
-                    if(currentArg->type == Arg::Type::Dynamic){
-                        currentArg->defaultValue = currentLineEdit->text();
-                        if (defaultVal != currentLineEdit->text())
-                            isDefault = false;
-                    }
-                }
+    QString testName = itemToTestMap.at(test).second.testName;
+    vLayout->addWidget(new QLabel("Test Name: "+ testName));
+    vLayout->addSpacing(5);
+    vLayout->addWidget(new QLabel("Test Command: "+ itemToTestMap.at(test).second.getCMD()));
+    vLayout->addSpacing(15);
 
-                if(isDefault){
-                    test->setText(testName+" (default)");
-                    test->setIcon(QIcon(QPixmap::fromImage(coloredIcon(":/icons/edit_default.png", "$Color-IconEditVVArg"))));
-                } else {
-                    test->setText(testName);
-                    test->setIcon(QIcon(QPixmap::fromImage(coloredIcon(":/icons/edit.png", "$Color-IconEditVVArg"))));
-                }
-                test->setToolTip(itemToTestMap.at(test).second.getCMD());
-            });
-            
-            connect(setBtn, &QPushButton::clicked, userInputDialog, &QDialog::accept);
-            userInputDialog->exec();
+    std::vector<std::tuple<Arg*, QLineEdit*, QString>> inputTuples;
+    std::vector<Arg>* argList = &(itemToTestMap.at(test).second.ArgList);
+    for(int i = 0; i < argList->size(); i++){
+        if(argList->at(i).type == Arg::Type::Dynamic){
+            QLineEdit* lineEdit = new QLineEdit(argList->at(i).defaultValue);
+            if(testName == DefaultTests::NO_OVERLAPS.testName || testName == DefaultTests::NO_NULL_REGIONS.testName)
+                inputTuples.push_back(std::make_tuple(&argList->at(i), lineEdit, DefaultTests::nameToTestMap.at(testName).ArgList.at(i).defaultValue));
+            else
+                inputTuples.push_back(std::make_tuple(&argList->at(i), lineEdit, ""));
+            formLayout->addRow(argList->at(i).argument, lineEdit);
+            formLayout->setSpacing(10);
         }
     }
+    
+    vLayout->addLayout(formLayout);
+    QPushButton* setBtn = new QPushButton("Set");
+    vLayout->addWidget(setBtn);
+    userInputDialog->setLayout(vLayout);
+
+    connect(setBtn, &QPushButton::clicked, [this, test, inputTuples, testName](){
+        bool isDefault = true;
+        for(const auto& [currentArg, currentLineEdit, defaultVal] : inputTuples){
+            if(currentArg->type == Arg::Type::Dynamic){
+                currentArg->defaultValue = currentLineEdit->text();
+                if (defaultVal != currentLineEdit->text())
+                    isDefault = false;
+            }
+        }
+
+        if(isDefault){
+            test->setText(testName+" (default)");
+            test->setIcon(QIcon(QPixmap::fromImage(coloredIcon(":/icons/edit_default.png", "$Color-IconEditVVArg"))));
+        } else {
+            test->setText(testName);
+            test->setIcon(QIcon(QPixmap::fromImage(coloredIcon(":/icons/edit.png", "$Color-IconEditVVArg"))));
+        }
+        test->setToolTip(itemToTestMap.at(test).second.getCMD());
+    });
+    
+    connect(setBtn, &QPushButton::clicked, userInputDialog, &QDialog::accept);
+    userInputDialog->exec();
 }
 
 void VerificationValidationWidget::resizeEvent(QResizeEvent* event) {
@@ -1326,6 +1338,7 @@ void VerificationValidationWidget::setupUI() {
     
     QGroupBox* groupbox3 = new QGroupBox();
     QDialogButtonBox* buttonOptions = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    buttonOptions->button(QDialogButtonBox::Ok)->setText("Run");
     QHBoxLayout* hbox = new QHBoxLayout();
     hbox->addWidget(new QLabel("Warning: running tests will overwrite your current results."));
     hbox->addWidget(buttonOptions);
@@ -1393,7 +1406,8 @@ void VerificationValidationWidget::setupUI() {
     // Search button pressed signal select function
     connect(searchBox, SIGNAL(textEdited(const QString &)), this, SLOT(searchTests_run(const QString &)));
     // Test input for gqa
-    connect(testList, SIGNAL(itemDoubleClicked(QListWidgetItem *)), this, SLOT(userInputDialogUI(QListWidgetItem *)));
+    connect(testList, SIGNAL(itemClicked(QListWidgetItem *)), this, SLOT(userInputDialogUI(QListWidgetItem *)));
+    connect(testList, SIGNAL(itemDoubleClicked(QListWidgetItem *)), this, SLOT(userInputDialogUIDC(QListWidgetItem *)));
     // Run test & exit
     connect(buttonOptions, &QDialogButtonBox::accepted, selectTestsDialog, &QDialog::accept);
     connect(buttonOptions, SIGNAL(accepted()), this, SLOT(testStartAndThreadSetUp()));
