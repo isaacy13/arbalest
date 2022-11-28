@@ -1400,6 +1400,15 @@ void VerificationValidationWidget::setupUI() {
     connect(buttonOptions, &QDialogButtonBox::rejected, selectTestsDialog, &QDialog::reject);
     // Open details dialog
     connect(resultTable, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(setupResultMenu(const QPoint&)));
+    connect(resultTable, &QTableWidget::itemSelectionChanged, this, [this]() {
+        QList<QTableWidgetItem*> list = resultTable->selectedItems();
+        QList<QTableWidgetItem*> selectedItems;
+        for (int i = 0; i < list.size(); i++) {
+            if (list.at(i)->column() == TEST_NAME_COLUMN)
+                selectedItems.append(list.at(i));
+        }
+        visualizeObjects(selectedItems);
+    });
 }
 
 void VerificationValidationWidget::testStartAndThreadSetUp() {
@@ -1546,13 +1555,12 @@ void VerificationValidationWidget::setupResultMenu(const QPoint& pos) {
     QList<QTableWidgetItem*> list = resultTable->selectedItems();
     QList<QTableWidgetItem*> selectedItems;
     for(int i = 0; i < list.size(); i++) {
-        if(list.at(i)->column() == TEST_NAME_COLUMN)
+        if (list.at(i)->column() == TEST_NAME_COLUMN) {
             selectedItems.append(list.at(i));
+            break;
+        }
     }
     QMenu *resultMenu = new QMenu();
-    resultMenu->addAction("Visualize Objects", this, [this, selectedItems]{
-        visualizeObjects(selectedItems);
-    });
     if(selectedItems.size() == 1) {
         resultMenu->addAction("Test Result Details", this, [this, selectedItems]{
             setupDetailedResult(selectedItems.at(0));
@@ -1560,6 +1568,9 @@ void VerificationValidationWidget::setupResultMenu(const QPoint& pos) {
         resultMenu->addAction("Copy Path", this, [this, selectedItems]{
             copyToClipboard(selectedItems.at(0));
         });
+    }
+    else {
+        resultMenu->addAction("No known actions.", this, [] {});
     }
 
     resultMenu->exec(QCursor::pos());
