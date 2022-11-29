@@ -1,0 +1,10 @@
+^C:\USERS\ISAAC\DESKTOP\CURRENT_SCHOOL\CSCE_482\RT-CUBED\SRC\ARBALEST\UNIT_TESTING\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Isaac/Desktop/current_school/CSCE_482/rt-cubed/src/arbalest/unit_testing -BC:/Users/Isaac/Desktop/current_school/CSCE_482/rt-cubed/src/arbalest/unit_testing --check-stamp-file C:/Users/Isaac/Desktop/current_school/CSCE_482/rt-cubed/src/arbalest/unit_testing/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

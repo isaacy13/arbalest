@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Isaac\Desktop\current_school\CSCE_482\rt-cubed\src\arbalest\unit_testing\CMakeFiles\50605afb3413fbd4869c0b8f7e0af780\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{B5A09EE9-2680-3088-8F2A-4299AFEFD769}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
