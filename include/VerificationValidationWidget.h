@@ -10,18 +10,24 @@
 #include <QtSql/QSqlTableModel>
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlError>
+#include <bu/app.h>
 #include <QtWidgets>
 #include <QMessageBox>
 #include <QHBoxWidget.h>
 #include "Utils.h"
 #include "VerificationValidation.h"
+#include "MgedWidget.h"
 
 #define RESULT_CODE_COLUMN 0
 #define TEST_NAME_COLUMN 1
 #define DESCRIPTION_COLUMN 2
-#define OBJPATH_COLUMN 3
-#define OBJECT_COLUMN 4
-#define TEST_RESULT_ID_COLUMN 5
+#define OBJECT_COLUMN 3
+#define OBJPATH_COLUMN 4
+#define RESULT_TABLE_IDX_COLUMN 5
+#define ERROR_TYPE_COLUMN 6
+#define ISSUE_ID_COLUMN 7
+#define TEST_RESULT_ID_COLUMN 8
+#define OBJECT_TESTED_COLUMN 9
 
 #define NO_SELECTION -1
 #define OPEN 0
@@ -34,6 +40,35 @@ class Dockable;
 using Arg = VerificationValidation::Arg;
 using Test = VerificationValidation::Test;
 
+#ifndef MGED_WORKER_H
+#define MGED_WORKER_H
+class MgedWorker : public QThread {
+    Q_OBJECT
+public:
+    MgedWorker(const QList<QListWidgetItem*>& selected_tests, const QStringList& selectedObjects, const int& totalTests, const std::map<QListWidgetItem*, std::pair<int, Test>>& itemToTestMap,
+        const QString& modelID, const QString& gFilePath)
+        : selected_tests(selected_tests), selectedObjects(selectedObjects), totalTests(totalTests), itemToTestMap(itemToTestMap),
+        modelID(modelID), gFilePath(gFilePath)
+    {}
+    void run() override;
+
+signals:
+    void updateProgressBarRequest(const int& currTest, const int& totalTests);
+    void updateStatusBarRequest(bool testRan, int currTest, int totalTests, int currObject, int totalObjects);
+    void showResultRequest(const QString& testResultID);
+    void queryRequest(const QString& query, const QStringList& args, QList<QList<QVariant>>* answer = nullptr, const int& numAnswersExpected = 0);
+    void queryRequest(const QString& query, const QStringList& args, QString& lastInsertId);
+
+private:
+    const QList<QListWidgetItem*> selected_tests;
+    const std::map<QListWidgetItem*, std::pair<int, Test>> itemToTestMap;
+    const QStringList selectedObjects;
+    const QString modelID;
+    const QString gFilePath;
+    const int totalTests;
+};
+#endif
+
 class VerificationValidationWidget : public QHBoxWidget
 {
     Q_OBJECT
@@ -42,50 +77,72 @@ public:
     ~VerificationValidationWidget();
     void updateDockableHeader();
     void showSelectTests();
-    void setStatusBar(QStatusBar* statusBar) { this->statusBar = statusBar; }
     QString getDBConnectionName() const { return dbConnectionName; }
+    bool isRunningTests() const { return runningTests; }
+    void stopRunningTests() {
+        if (!mgedWorkerThread) return;
+        if (!mgedWorkerThread->isInterruptionRequested()) mgedWorkerThread->requestInterruption();
+        else popup("Please wait... terminating tasks...");
+        
+        if (!vvProgressBar) return;
+        vvProgressBar->setStyleSheet("QProgressBar::chunk {background: #CC0202;}");
+    }
 
     void showNewTestDialog();
     void showRemoveTestDialog();
     void showNewTestSuiteDialog();
     void showRemoveTestSuiteDialog();
-public slots:
-    void runTests();
+    void exportToCSV();
+
+signals:
+    void queryFinished(const QList<QList<QVariant>>& answer);
+    void updateVerifyValidateAct(Document* currentDocument);
 
 private slots:
 	void updateSuiteSelectAll(QListWidgetItem*);
 	void updateTestSelectAll(QListWidgetItem*);
 	void updateTestListWidget(QListWidgetItem*);
     void testListSelection(QListWidgetItem*);
-    void copyToClipboard();
-    void setupResultMenu(int row, int column);
-    void setupDetailedResult();
-    void visualizeOverlaps();
+    void copyToClipboard(QTableWidgetItem*);
+    void setupResultMenu(const QPoint&);
+    void setupDetailedResult(QTableWidgetItem*);
+    void visualizeObjects(QList<QTableWidgetItem*>);
     void searchTests_run(const QString &input);
     void searchTests_rm(const QString &input);
     void searchTests_TS(const QString &input);
+    void searchTests_SA();
     void userInputDialogUI(QListWidgetItem*);
+    void userInputDialogUIDC(QListWidgetItem*);
     void createTest();
     void removeTests();
     void createSuite();
     void removeSuites();
     void addArgForm();
     void rmvArgForm();
+    void isArgTyped(const QString& text);
     void isVarClicked(int state);
     void resultTableChangeSize();
+    void showResult(const QString& testResultID);
+    void performQueryRequest(const QString& query, const QStringList& args, QList<QList<QVariant>>* answer, const int& numAnswersExpected);
+    void performQueryRequest(const QString& query, const QStringList& args, QString& lastInsertId);
+    void testStartAndThreadSetUp();
+    void pathDisplayOptimize(int idx, int oldSize, int newSize);
 
 private:
     MainWindow *mainWindow;
     Dockable *parentDockable;
     int msgBoxRes;
-    QString folderName;
+    QString cacheFolder;
+    bool hasUnfinishedTests = false;
 
     // widget-specific data
     Document *document;
     QString modelID;
     QString dbFilePath;
-    QString dbName;
     QString dbConnectionName;
+
+    // stateful data
+    bool runningTests;
 
     // user interface data
     QTableWidget* resultTable;
@@ -94,11 +151,14 @@ private:
     QListWidget* test_sa;
     QListWidget* suite_sa;
     QDialog* selectTestsDialog;
-    QStatusBar* statusBar;
     QClipboard* clipboard;
-    int currentResultRow = 1;
     QWidget* content_widget;
     std::vector<QGroupBox*> argForms;
+    QProgressBar* vvProgressBar;
+    QPushButton* btnCollapseTerminal;
+
+    MgedWidget* terminal;
+    MgedWorker* mgedWorkerThread;
 
     // Test and test suite create remove
     QLineEdit* testNameInput;
@@ -116,12 +176,13 @@ private:
     QLineEdit* suiteNameBox;
     bool minBtn_toggle;
     QToolButton* minBtn;
+    int resultTableSortIdx;
     
     std::map<QListWidgetItem*, std::pair<int, VerificationValidation::Test>> itemToTestMap;
     std::map<int, QListWidgetItem*> idToItemMap;
 
     // init functions
-    void dbConnect(QString dbFilePath);
+    void dbConnect(const QString& dbFilePath);
     void dbInitTables();
     void dbPopulateDefaults();
     void setupUI();
@@ -152,19 +213,17 @@ private:
     void dbUpdateModelUUID();
     void dbClearResults();
 
-    // events
-    void resizeEvent(QResizeEvent *event) override;
-
     // ui stuff
-    void showResult(const QString &testResultID);
     void showAllResults();
 
     // Other
     void checkSuiteSA();
     void checkTestSA();
-    QString *runTest(const QString &cmd);
+    QList<QListWidgetItem*> getSelectedTests();
     void validateChecksum();
     void addItemFromTest(QListWidget* &listWidget);
+
+    void resizeEvent(QResizeEvent *event) override;
 };
 
 #endif // VVWIDGET_H

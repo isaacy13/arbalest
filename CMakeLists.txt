@@ -41,10 +41,11 @@ set(arbalest_Sources
         src/utils/VerificationValidation.cpp
         src/utils/VerificationValidationParser.cpp
         src/gui/VerificationValidationWidget.cpp
+        src/gui/MgedWidget.cpp
         src/display/GridRenderer.cpp)
 
 set(arbalest_Link_Libraries
-        ged
+        libged
         coreinterface
         Qt5::Widgets
         Qt5::Sql
@@ -66,3 +67,6 @@ add_executable(arbalest
         ${arbalest_PROCESSED_RCC})
 
 target_link_libraries(arbalest ${arbalest_Link_Libraries})
+
+set_property(TARGET arbalest PROPERTY CXX_STANDARD 17)
+set_property(TARGET arbalest PROPERTY CXX_STANDARD_REQUIRED ON)
