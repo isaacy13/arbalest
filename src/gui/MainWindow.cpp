@@ -1,6 +1,7 @@
 #include <QtWidgets/QFileDialog>
 #include "MainWindow.h"
 #include "DisplayGrid.h"
+#include <QtGlobal>
 #include <Document.h>
 #include <QtWidgets/QLabel>
 #include <include/QSSPreprocessor.h>

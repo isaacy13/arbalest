@@ -1485,8 +1485,8 @@ void VerificationValidationWidget::testStartAndThreadSetUp() {
     mgedWorkerThread = new MgedWorker(selected_tests, selectedObjects, totalTests, itemToTestMap, modelID, *(document->getFilePath()));
 
     // signal that allows for updating of MainWindow's status bar
-    connect(mgedWorkerThread, qOverload<bool, int, int, int, int>(&MgedWorker::updateStatusBarRequest),
-            mainWindow, qOverload<bool, int, int, int, int>(&MainWindow::setStatusBarMessage));
+    connect(mgedWorkerThread, QOverload<bool, int, int, int, int>::of(&MgedWorker::updateStatusBarRequest),
+            mainWindow, QOverload<bool, int, int, int, int>::of(&MainWindow::setStatusBarMessage));
 
     // signal that allows for updating of progress bar from thread
     connect(mgedWorkerThread, &MgedWorker::updateProgressBarRequest, this, [this](const int &currTest, const int &totalTests)
@@ -1502,12 +1502,12 @@ void VerificationValidationWidget::testStartAndThreadSetUp() {
 
     // signals that allows V&V Widget's database to be updated from thread
     // note: must be blocking
-    connect(mgedWorkerThread, qOverload<const QString &, const QStringList &, QList<QList<QVariant>> *, const int &>(&MgedWorker::queryRequest),
-            this, qOverload<const QString &, const QStringList &, QList<QList<QVariant>> *, const int &>(&VerificationValidationWidget::performQueryRequest),
+    connect(mgedWorkerThread, QOverload<const QString &, const QStringList &, QList<QList<QVariant>> *, const int &>::of(&MgedWorker::queryRequest),
+            this, QOverload<const QString &, const QStringList &, QList<QList<QVariant>> *, const int &>::of(&VerificationValidationWidget::performQueryRequest),
             Qt::BlockingQueuedConnection);
 
-    connect(mgedWorkerThread, qOverload<const QString &, const QStringList &, QString &>(&MgedWorker::queryRequest),
-            this, qOverload<const QString &, const QStringList &, QString &>(&VerificationValidationWidget::performQueryRequest),
+    connect(mgedWorkerThread, QOverload<const QString &, const QStringList &, QString &>::of(&MgedWorker::queryRequest),
+            this, QOverload<const QString &, const QStringList &, QString &>::of(&VerificationValidationWidget::performQueryRequest),
             Qt::BlockingQueuedConnection);
 
     // thread finish -> cleanup
