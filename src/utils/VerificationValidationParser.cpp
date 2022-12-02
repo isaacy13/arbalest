@@ -3,10 +3,10 @@
 //
 
 #include "Utils.h"
-#include "VerificationValidation.h"
 #include <iostream> 
 #include <sstream> 
 #include <cstdlib>
+#include "VerificationValidation.h"
 
 using Result = VerificationValidation::Result;
 using Test = VerificationValidation::Test;

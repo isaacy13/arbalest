@@ -35,6 +35,7 @@ namespace VerificationValidation {
         }
 
         bool operator<(const Arg& rhs) { return argument < rhs.argument; }
+        static bool comparator(const Arg& lhs, const Arg& rhs) { return lhs.argument < rhs.argument; }
     };
 
     class Test {
@@ -64,8 +65,8 @@ namespace VerificationValidation {
 
             std::vector<Arg> lhsArgList(ArgList);
             std::vector<Arg> rhsArgList(rhs.ArgList);
-            std::sort(lhsArgList.begin(), lhsArgList.end());
-            std::sort(rhsArgList.begin(), rhsArgList.end());
+            std::sort(lhsArgList.begin(), lhsArgList.end(), &Arg::comparator);
+            std::sort(rhsArgList.begin(), rhsArgList.end(), &Arg::comparator);
 
             for (int i = 0; i < lhsArgList.size(); i++) {
                 if (lhsArgList[i].type == rhsArgList[i].type && (lhsArgList[i].type == Arg::Type::ObjectName || lhsArgList[i].type == Arg::Type::ObjectNone || lhsArgList[i].type == Arg::Type::ObjectPath))
@@ -81,8 +82,8 @@ namespace VerificationValidation {
 
             std::vector<Arg> lhsArgList(ArgList);
             std::vector<Arg> rhsArgList(rhs.ArgList);
-            std::sort(lhsArgList.begin(), lhsArgList.end());
-            std::sort(rhsArgList.begin(), rhsArgList.end());
+            std::sort(lhsArgList.begin(), lhsArgList.end(), &Arg::comparator);
+            std::sort(rhsArgList.begin(), rhsArgList.end(), &Arg::comparator);
 
             for (int i = 0; i < lhsArgList.size(); i++) {
                 if (lhsArgList[i].type == rhsArgList[i].type && (lhsArgList[i].type == Arg::Type::ObjectName || lhsArgList[i].type == Arg::Type::ObjectNone || lhsArgList[i].type == Arg::Type::ObjectPath))
