@@ -42,7 +42,9 @@ set(arbalest_Sources
         src/utils/VerificationValidationParser.cpp
         src/gui/VerificationValidationWidget.cpp
         src/gui/MgedWidget.cpp
-        src/display/GridRenderer.cpp)
+        src/display/GridRenderer.cpp
+        src/display/MouseAction.cpp
+        src/display/MoveCameraMouseAction.cpp)
 
 set(arbalest_Link_Libraries
         libged
