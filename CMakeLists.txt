@@ -42,14 +42,25 @@ set(arbalest_Sources
         src/utils/VerificationValidationParser.cpp
         src/gui/VerificationValidationWidget.cpp
         src/gui/MgedWidget.cpp
-        src/display/GridRenderer.cpp)
+        src/display/GridRenderer.cpp
+        src/display/MouseAction.cpp
+        src/display/MoveCameraMouseAction.cpp)
 
+IF (WIN32)
 set(arbalest_Link_Libraries
         libged
         coreinterface
         Qt5::Widgets
         Qt5::Sql
         OpenGL::GL)
+ELSE()
+set(arbalest_Link_Libraries
+        ged
+        coreinterface
+        Qt5::Widgets
+        Qt5::Sql
+        OpenGL::GL)
+ENDIF()
 
 # Meta-Object Compiling
 file(GLOB arbalest_HEADERS_TO_MOC ./include/*)
