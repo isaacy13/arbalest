@@ -1421,6 +1421,7 @@ void VerificationValidationWidget::setupUI() {
             if (list.at(i)->column() == TEST_NAME_COLUMN)
                 selectedItems.append(list.at(i));
         }
+        if (!selectedItems.size()) return;
         visualizeObjects(selectedItems);
     });
 }
